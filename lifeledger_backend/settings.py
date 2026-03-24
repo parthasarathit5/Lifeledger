@@ -108,15 +108,7 @@ STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 
-import sys
 
-if 'runserver' not in sys.argv:
-    try:
-        from django.core.management import call_command
-        call_command('migrate')
-        call_command('collectstatic', '--noinput')
-    except Exception as e:
-        print("Migration error:", e)
 
 # Great question! 😊
 
