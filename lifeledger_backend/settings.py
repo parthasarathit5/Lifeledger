@@ -14,12 +14,27 @@ import os
 import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-123')
+# o3x*!u@*&g9r=bne5l-7zxdff#0mv9s8!$8vs0%4uf)4pv1_6+
 
-SECRET_KEY = 'django-insecure-p!&=4d#7b^&=#eghl7*k@k69(^oppz(^o8ss32s4w$#^&33gqk'
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
-DEBUG = True
-
-ALLOWED_HOSTS = ['*']
+if os.environ.get('DATABASE_URL'):
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL'),
+            conn_max_age=600
+        )
+    }
+else:
+    # Local development (no error)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -76,19 +91,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'lifeledger_backend.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres',
-        'USER': 'postgres',
-        'PASSWORD': 'Supabase@123',
-        'HOST': 'db.ubcwlqajuqebuahlqddc.supabase.co',
-        'PORT': '5432',
-        'OPTIONS': {
-            'sslmode': 'require',
-        },
-    }
-}
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
