@@ -21,20 +21,33 @@ def save_history(user, type, title, amount=None, category="", note=""):
     )
 
 
+from django.http import JsonResponse
+import json
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+
 @csrf_exempt
 def login_view(request):
+
     if request.method == "GET":
         return JsonResponse({"message": "Login API working"})
-    if request.method == "POST":
+
+    elif request.method == "POST":
         try:
             data = json.loads(request.body)
         except:
             return JsonResponse({"status": "error", "message": "Invalid request"})
+
         email = data.get("email")
         password = data.get("password")
+
         if not email or not password:
             return JsonResponse({"status": "error", "message": "Missing fields"})
+
         user = User.objects.filter(email=email).first()
+
         if user and check_password(password, user.password):
             return JsonResponse({
                 "status": "success",
@@ -42,36 +55,63 @@ def login_view(request):
                 "name": user.name,
                 "email": user.email,
             })
-        return JsonResponse({"status": "error", "message": "Invalid email or password"})
 
+        else:
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid email or password"
+            })
 
+    # 🔥 VERY IMPORTANT (this fixes your crash)
+    return JsonResponse({
+        "status": "error",
+        "message": "Invalid request method"
+    })
 @csrf_exempt
 def signup_view(request):
+
     if request.method == "GET":
         return JsonResponse({"message": "Signup API working"})
-    if request.method == "POST":
+
+    elif request.method == "POST":
         try:
             data = json.loads(request.body)
         except:
             return JsonResponse({"status": "error", "message": "Invalid request"})
-        name = data.get("name", "")
+
+        name = data.get("name", "").strip()
         email = data.get("email")
         password = data.get("password")
+
         if not email or not password or not name:
-            return JsonResponse({"status": "error", "message": "All fields are required"})
+            return JsonResponse({
+                "status": "error",
+                "message": "All fields are required"
+            })
+
         if User.objects.filter(email=email).exists():
-            return JsonResponse({"status": "error", "message": "Email already registered"})
+            return JsonResponse({
+                "status": "error",
+                "message": "Email already registered"
+            })
+
         user = User.objects.create(
             name=name,
             email=email,
             password=make_password(password)
         )
+
         return JsonResponse({
             "status": "success",
             "user_id": user.id,
             "name": user.name,
         })
 
+    # 🔥 VERY IMPORTANT (prevents crash)
+    return JsonResponse({
+        "status": "error",
+        "message": "Invalid request method"
+    })
 
 @csrf_exempt
 def dashboard_view(request, user_id):

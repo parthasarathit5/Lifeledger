@@ -75,6 +75,7 @@ DATABASES = {
         'PORT': '5432',
         'OPTIONS': {
             'sslmode': 'require',
+            'connect_timeout': 10,
         },
     }
 }
