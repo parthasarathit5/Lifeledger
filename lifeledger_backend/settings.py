@@ -70,7 +70,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'postgres',
         'USER': 'postgres.ubcwlqajuqebuahlqddc',
-        'PASSWORD': 'Supabase@123',
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'Supabase@123'),
         'HOST': 'aws-1-ap-southeast-1.pooler.supabase.com',
         'PORT': '5432',
         'OPTIONS': {
@@ -79,7 +79,32 @@ DATABASES = {
         },
     }
 }
+# ```
 
+# ---
+
+# ## Then Add in Render Dashboard:
+# 1. Go to Render → your service → **Environment**
+# 2. Add:
+# ```
+# DB_PASSWORD = Supabase@123
+# ```
+
+# ---
+
+# ## How it works:
+# ```
+# Local PC → uses 'Supabase@123' directly (fallback)
+# Render   → uses DB_PASSWORD from environment ✅
+# GitHub   → shows only os.environ.get (password hidden!) ✅
+# Render is like a LOCKER 🔒
+# You put DB_PASSWORD = Supabase@123 in that locker
+
+# When Django starts on Render server:
+# os.environ.get('DB_PASSWORD') 
+# → opens the locker
+# → gets 'Supabase@123'
+# → connects to Supabase ✅
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
