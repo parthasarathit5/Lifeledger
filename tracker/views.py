@@ -2,12 +2,12 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils import timezone
+from django.utils.timezone import localtime  # ✅ Added this
 import json
 from .models import User, Expense, Income, Habit, HabitLog, Task, Mood, History
 
-
 def save_history(user, type, title, amount=None, category="", note=""):
-    today = timezone.now().date()
+    today = timezone.localdate()  # ✅ Fixed: uses IST date now
     History.objects.create(
         user=user,
         type=type,
@@ -20,94 +20,73 @@ def save_history(user, type, title, amount=None, category="", note=""):
         year=today.year,
     )
 
-
-from django.http import JsonResponse
-import json
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
-
 @csrf_exempt
 def login_view(request):
-
     if request.method == "GET":
         return JsonResponse({"message": "Login API working"})
-
     elif request.method == "POST":
         try:
             data = json.loads(request.body)
         except:
             return JsonResponse({"status": "error", "message": "Invalid request"})
-
         email = data.get("email")
         password = data.get("password")
-
         if not email or not password:
             return JsonResponse({"status": "error", "message": "Missing fields"})
-
         user = User.objects.filter(email=email).first()
-
         if user and check_password(password, user.password):
             return JsonResponse({
                 "status": "success",
                 "user_id": user.id,
                 "name": user.name,
                 "email": user.email,
+                # ✅ Added IST login time
+                "login_time": localtime(timezone.now()).strftime('%d-%m-%Y %I:%M %p'),
             })
-
         else:
             return JsonResponse({
                 "status": "error",
                 "message": "Invalid email or password"
             })
-
-    # 🔥 VERY IMPORTANT (this fixes your crash)
     return JsonResponse({
         "status": "error",
         "message": "Invalid request method"
     })
+
 @csrf_exempt
 def signup_view(request):
-
     if request.method == "GET":
         return JsonResponse({"message": "Signup API working"})
-
     elif request.method == "POST":
         try:
             data = json.loads(request.body)
         except:
             return JsonResponse({"status": "error", "message": "Invalid request"})
-
         name = data.get("name", "").strip()
         email = data.get("email")
         password = data.get("password")
-
         if not email or not password or not name:
             return JsonResponse({
                 "status": "error",
                 "message": "All fields are required"
             })
-
         if User.objects.filter(email=email).exists():
             return JsonResponse({
                 "status": "error",
                 "message": "Email already registered"
             })
-
         user = User.objects.create(
             name=name,
             email=email,
             password=make_password(password)
         )
-
         return JsonResponse({
             "status": "success",
             "user_id": user.id,
             "name": user.name,
+            # ✅ Added IST signup time
+            "created_at": localtime(timezone.now()).strftime('%d-%m-%Y %I:%M %p'),
         })
-
-    # 🔥 VERY IMPORTANT (prevents crash)
     return JsonResponse({
         "status": "error",
         "message": "Invalid request method"
@@ -119,14 +98,11 @@ def dashboard_view(request, user_id):
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return JsonResponse({"status": "error", "message": "User not found"})
-
     total_expense = sum(e.amount for e in Expense.objects.filter(user=user))
     total_income = sum(i.amount for i in Income.objects.filter(user=user))
     balance = total_income - total_expense
-
     recent_expenses = Expense.objects.filter(user=user).order_by('-date')[:5]
     recent_incomes = Income.objects.filter(user=user).order_by('-date')[:5]
-
     transactions = []
     for e in recent_expenses:
         transactions.append({
@@ -144,17 +120,14 @@ def dashboard_view(request, user_id):
             "amount": i.amount,
             "date": str(i.date),
         })
-
     transactions.sort(key=lambda x: x["date"], reverse=True)
-
     total_habits = Habit.objects.filter(user=user).count()
-    today = timezone.now().date()
+    today = timezone.localdate()  # ✅ Fixed: IST date
     completed_habits = HabitLog.objects.filter(
         habit__user=user, date=today, completed=True
     ).count()
     pending_tasks = Task.objects.filter(user=user, completed=False).count()
     completed_tasks = Task.objects.filter(user=user, completed=True).count()
-
     return JsonResponse({
         "status": "success",
         "balance": balance,
@@ -167,14 +140,12 @@ def dashboard_view(request, user_id):
         "completed_tasks": completed_tasks,
     })
 
-
 @csrf_exempt
 def expense_view(request, user_id):
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return JsonResponse({"status": "error", "message": "User not found"})
-
     if request.method == "GET":
         expenses = Expense.objects.filter(user=user).order_by('-date')
         return JsonResponse({
@@ -191,7 +162,6 @@ def expense_view(request, user_id):
                 for e in expenses
             ]
         })
-
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -210,16 +180,9 @@ def expense_view(request, user_id):
             category=category,
             note=note,
         )
-        save_history(
-            user=user,
-            type='expense',
-            title=title,
-            amount=float(amount),
-            category=category,
-            note=note,
-        )
+        save_history(user=user, type='expense', title=title,
+                     amount=float(amount), category=category, note=note)
         return JsonResponse({"status": "success", "id": expense.id})
-
     if request.method == "DELETE":
         try:
             data = json.loads(request.body)
@@ -229,14 +192,12 @@ def expense_view(request, user_id):
         Expense.objects.filter(id=expense_id, user=user).delete()
         return JsonResponse({"status": "success"})
 
-
 @csrf_exempt
 def income_view(request, user_id):
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return JsonResponse({"status": "error", "message": "User not found"})
-
     if request.method == "GET":
         incomes = Income.objects.filter(user=user).order_by('-date')
         return JsonResponse({
@@ -253,7 +214,6 @@ def income_view(request, user_id):
                 for i in incomes
             ]
         })
-
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -272,16 +232,9 @@ def income_view(request, user_id):
             category=category,
             note=note,
         )
-        save_history(
-            user=user,
-            type='income',
-            title=title,
-            amount=float(amount),
-            category=category,
-            note=note,
-        )
+        save_history(user=user, type='income', title=title,
+                     amount=float(amount), category=category, note=note)
         return JsonResponse({"status": "success", "id": income.id})
-
     if request.method == "DELETE":
         try:
             data = json.loads(request.body)
@@ -291,16 +244,14 @@ def income_view(request, user_id):
         Income.objects.filter(id=income_id, user=user).delete()
         return JsonResponse({"status": "success"})
 
-
 @csrf_exempt
 def habit_view(request, user_id):
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return JsonResponse({"status": "error", "message": "User not found"})
-
     if request.method == "GET":
-        today = timezone.now().date()
+        today = timezone.localdate()  # ✅ Fixed: IST date
         habits = Habit.objects.filter(user=user)
         return JsonResponse({
             "status": "success",
@@ -316,7 +267,6 @@ def habit_view(request, user_id):
                 for h in habits
             ]
         })
-
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -328,7 +278,6 @@ def habit_view(request, user_id):
             return JsonResponse({"status": "error", "message": "Habit name required"})
         habit = Habit.objects.create(user=user, name=name, icon=icon)
         return JsonResponse({"status": "success", "id": habit.id})
-
     if request.method == "DELETE":
         try:
             data = json.loads(request.body)
@@ -338,16 +287,14 @@ def habit_view(request, user_id):
         Habit.objects.filter(id=habit_id, user=user).delete()
         return JsonResponse({"status": "success"})
 
-
 @csrf_exempt
 def habit_log_view(request, habit_id):
     try:
         habit = Habit.objects.get(id=habit_id)
     except Habit.DoesNotExist:
         return JsonResponse({"status": "error", "message": "Habit not found"})
-
     if request.method == "POST":
-        today = timezone.now().date()
+        today = timezone.localdate()  # ✅ Fixed: IST date
         log, created = HabitLog.objects.get_or_create(habit=habit, date=today)
         log.completed = not log.completed
         log.save()
@@ -363,14 +310,12 @@ def habit_log_view(request, habit_id):
             "completed": log.completed,
         })
 
-
 @csrf_exempt
 def task_view(request, user_id):
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return JsonResponse({"status": "error", "message": "User not found"})
-
     if request.method == "GET":
         tasks = Task.objects.filter(user=user).order_by('completed', '-created_at')
         return JsonResponse({
@@ -388,7 +333,6 @@ def task_view(request, user_id):
                 for t in tasks
             ]
         })
-
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -406,7 +350,6 @@ def task_view(request, user_id):
             due_date=due_date,
         )
         return JsonResponse({"status": "success", "id": task.id})
-
     if request.method == "PUT":
         try:
             data = json.loads(request.body)
@@ -417,7 +360,7 @@ def task_view(request, user_id):
         if task:
             task.completed = not task.completed
             if task.completed:
-                task.completed_at = timezone.now().date()
+                task.completed_at = timezone.localdate()  # ✅ Fixed: IST date
                 save_history(
                     user=user,
                     type='task',
@@ -428,7 +371,6 @@ def task_view(request, user_id):
                 task.completed_at = None
             task.save()
         return JsonResponse({"status": "success"})
-
     if request.method == "DELETE":
         try:
             data = json.loads(request.body)
@@ -438,14 +380,12 @@ def task_view(request, user_id):
         Task.objects.filter(id=task_id, user=user).delete()
         return JsonResponse({"status": "success"})
 
-
 @csrf_exempt
 def mood_view(request, user_id):
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return JsonResponse({"status": "error", "message": "User not found"})
-
     if request.method == "GET":
         moods = Mood.objects.filter(user=user).order_by('-date')[:30]
         return JsonResponse({
@@ -460,7 +400,6 @@ def mood_view(request, user_id):
                 for m in moods
             ]
         })
-
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -479,30 +418,24 @@ def mood_view(request, user_id):
         )
         return JsonResponse({"status": "success", "id": mood_obj.id})
 
-
 @csrf_exempt
 def history_view(request, user_id):
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return JsonResponse({"status": "error", "message": "User not found"})
-
     if request.method == "GET":
         month = request.GET.get("month")
         year = request.GET.get("year")
         type_filter = request.GET.get("type")
-
         history = History.objects.filter(user=user)
-
         if month:
             history = history.filter(month=int(month))
         if year:
             history = history.filter(year=int(year))
         if type_filter:
             history = history.filter(type=type_filter)
-
         history = history.order_by('-date', '-id')
-
         return JsonResponse({
             "status": "success",
             "history": [

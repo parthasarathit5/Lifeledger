@@ -172,8 +172,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # # ```
 # # Before (your laptop):
-# # Django → localhost → PostgreSQL on YOUR PC
-# #          ❌ Laptop off = no database
+# #
 
 # # After (Supabase cloud):
 # # Django → db.ubcwlqajuqebuahlqddc.supabase.co → Supabase Cloud
