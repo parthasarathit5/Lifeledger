@@ -136,3 +136,8 @@ class Budget(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.category} - {self.amount}"
+class Behavior(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    title = models.CharField(max_length=100)
+    description = models.TextField()
+    created_at = models.DateField(auto_now_add=True)
