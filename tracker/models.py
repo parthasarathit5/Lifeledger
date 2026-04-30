@@ -127,3 +127,12 @@ class History(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.type} - {self.date}"
+class Budget(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='budgets', null=True)
+    category = models.CharField(max_length=50)
+    amount = models.FloatField(default=0.0)
+    month = models.IntegerField(default=1)
+    year = models.IntegerField(default=2026)
+
+    def __str__(self):
+        return f"{self.user} - {self.category} - {self.amount}"

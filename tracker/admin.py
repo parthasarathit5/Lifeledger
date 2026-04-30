@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Expense, Income, Habit, HabitLog, Task, Mood, History
+from .models import User, Expense, Income, Habit, HabitLog, Task, Mood, History,Budget
 
 
 @admin.register(User)
@@ -61,6 +61,12 @@ class HistoryAdmin(admin.ModelAdmin):
     search_fields = ['title', 'user__email']
     list_filter = ['type', 'month', 'year', 'date']
     ordering = ['-date', '-id']
+@admin.register(Budget)
+class BudgetAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'category', 'amount', 'month', 'year']
+    search_fields = ['user__email', 'category']
+    list_filter = ['month', 'year', 'category']
+    ordering = ['-year', '-month']
 
 
 admin.site.site_header = "LifeLedger Admin"
