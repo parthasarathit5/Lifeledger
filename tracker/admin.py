@@ -67,11 +67,9 @@ class BudgetAdmin(admin.ModelAdmin):
     search_fields = ['user__email', 'category']
     list_filter = ['month', 'year', 'category']
     ordering = ['-year', '-month']
-
-
-admin.site.site_header = "LifeLedger Admin"
-admin.site.site_title = "LifeLedger"
-admin.site.index_title = "Welcome to LifeLedger Admin Panel"
+admin.site.site_header = "LifeTracer Admin"
+admin.site.site_title = "LifeTracer"
+admin.site.index_title = "Welcome to LifeTracer Admin Panel"
 
 
 # Good — this is the right question to ask before jumping ahead 👍

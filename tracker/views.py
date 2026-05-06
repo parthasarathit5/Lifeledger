@@ -568,72 +568,120 @@ def predictor_view(request, user_id):
 
     today = timezone.localdate()
 
-    # Get last 3 months average
+    # ===== LAST 3 MONTHS AVG =====
     total_expense_3months = 0
     total_income_3months = 0
     months_count = 0
 
+    category_data = {}
+
     for i in range(1, 4):
         d = today.replace(day=1) - timedelta(days=i * 30)
-        exp = sum(e.amount for e in Expense.objects.filter(
-            user=user, date__month=d.month, date__year=d.year))
-        inc = sum(inc.amount for inc in Income.objects.filter(
-            user=user, date__month=d.month, date__year=d.year))
-        if exp > 0 or inc > 0:
-            total_expense_3months += exp
-            total_income_3months += inc
+
+        expenses = Expense.objects.filter(
+            user=user, date__month=d.month, date__year=d.year
+        )
+
+        incomes = Income.objects.filter(
+            user=user, date__month=d.month, date__year=d.year
+        )
+
+        exp_total = sum(e.amount for e in expenses)
+        inc_total = sum(i.amount for i in incomes)
+
+        if exp_total > 0 or inc_total > 0:
+            total_expense_3months += exp_total
+            total_income_3months += inc_total
             months_count += 1
 
-    avg_expense = total_expense_3months / months_count if months_count > 0 else 0
-    avg_income = total_income_3months / months_count if months_count > 0 else 0
+        # 📊 Category tracking
+        for e in expenses:
+            category_data[e.category] = category_data.get(e.category, 0) + e.amount
+
+    avg_expense = total_expense_3months / months_count if months_count else 0
+    avg_income = total_income_3months / months_count if months_count else 0
     avg_savings = avg_income - avg_expense
 
-    # This month so far
+    # ===== CURRENT MONTH =====
     days_passed = today.day
     days_in_month = 30
     days_remaining = days_in_month - days_passed
 
     this_month_expense = sum(e.amount for e in Expense.objects.filter(
         user=user, date__month=today.month, date__year=today.year))
+
     this_month_income = sum(i.amount for i in Income.objects.filter(
         user=user, date__month=today.month, date__year=today.year))
 
-    # Predict end of month
     daily_spend = this_month_expense / days_passed if days_passed > 0 else 0
+
     predicted_month_expense = this_month_expense + (daily_spend * days_remaining)
     predicted_savings = this_month_income - predicted_month_expense
 
-    # Predict 6 months savings
     savings_6months = avg_savings * 6
     savings_1year = avg_savings * 12
 
-    # Budget warning
-    if avg_expense > 0 and avg_income > 0:
-        spend_ratio = avg_expense / avg_income
-        if spend_ratio > 0.9:
-            warning = "⚠️ You are spending 90%+ of income! Save more!"
-        elif spend_ratio > 0.7:
-            warning = "📊 You spend 70% of income. Try to reduce by 10%"
+    # ===== 🔥 SMART INSIGHTS =====
+    insights = []
+    suggestions = []
+
+    # 🧠 Top spending category
+    if category_data:
+        top_category = max(category_data, key=category_data.get)
+        insights.append(f"💸 Most spending is on {top_category}")
+
+    # 📅 Weekend behavior
+    weekend = sum(e.amount for e in Expense.objects.filter(
+        user=user) if e.date.weekday() >= 5)
+    weekday = sum(e.amount for e in Expense.objects.filter(
+        user=user) if e.date.weekday() < 5)
+
+    if weekend > weekday:
+        insights.append("📅 You spend more on weekends")
+        suggestions.append("Try limiting weekend spending")
+
+    # ⚠ Spending ratio
+    if avg_income > 0:
+        ratio = avg_expense / avg_income
+
+        if ratio > 0.9:
+            suggestions.append("⚠ You spend almost all income! Save more")
+        elif ratio > 0.7:
+            suggestions.append("📊 Reduce expenses by 10% to improve savings")
         else:
-            warning = "✅ Great! You are saving well!"
+            insights.append("✅ Good saving habit")
+
+    # 🧠 Daily spend warning
+    if daily_spend > 0:
+        insights.append(f"💡 You spend around ₹{int(daily_spend)}/day")
+
+    # 🎯 Smart saving tip
+    if predicted_savings < 0:
+        suggestions.append("❌ You may go negative this month!")
     else:
-        warning = "Add income and expenses to get predictions"
+        suggestions.append(f"💰 You can save ₹{int(predicted_savings)} this month")
 
     return JsonResponse({
         "status": "success",
+
+        # 📊 core data
         "avg_monthly_expense": round(avg_expense, 2),
         "avg_monthly_income": round(avg_income, 2),
         "avg_monthly_savings": round(avg_savings, 2),
+
         "predicted_month_expense": round(predicted_month_expense, 2),
         "predicted_month_savings": round(predicted_savings, 2),
+
         "savings_6months": round(savings_6months, 2),
         "savings_1year": round(savings_1year, 2),
+
         "daily_spend_rate": round(daily_spend, 2),
         "days_remaining": days_remaining,
-        "warning": warning,
+
+        # 🔥 NEW INTELLIGENCE
+        "insights": insights,
+        "suggestions": suggestions,
     })
-
-
 # ============================================================
 # NEW FEATURE 5 — COMPARE MONTH
 # ============================================================
@@ -829,4 +877,199 @@ def behavior_view(request, user_id):
     return JsonResponse({
         "status": "success",
         "insights": insights
+    })
+def alerts_view(request, user_id):
+    alerts = []
+
+    # Example logic
+    total_expense = 12000
+    budget = 10000
+    pending_tasks = 3
+    missed_habits = 2
+
+    if total_expense > budget:
+        alerts.append("You exceeded your budget")
+
+    if total_expense > 0.8 * budget:
+        alerts.append("You are near budget limit")
+
+    if pending_tasks > 0:
+        alerts.append("You have pending tasks")
+
+    if missed_habits > 0:
+        alerts.append("You missed habits today")
+
+    return JsonResponse({
+        "status": "success",
+        "alerts": alerts
+    })
+@csrf_exempt
+def goal_view(request, user_id):
+    user = User.objects.get(id=user_id)
+
+    if request.method == "GET":
+        goals = Goal.objects.filter(user=user)
+
+        result = []
+        for g in goals:
+            savings = sum(i.amount for i in Income.objects.filter(user=user)) - \
+                      sum(e.amount for e in Expense.objects.filter(user=user))
+
+            progress = (savings / g.target_amount * 100) if g.target_amount > 0 else 0
+
+            result.append({
+                "id": g.id,
+                "title": g.title,
+                "target": g.target_amount,
+                "saved": savings,
+                "progress": int(progress)
+            })
+
+        return JsonResponse({"status": "success", "goals": result})
+
+    if request.method == "POST":
+        data = json.loads(request.body)
+
+        g = Goal.objects.create(
+            user=user,
+            title=data["title"],
+            target_amount=float(data["target"])
+        )
+
+        return JsonResponse({"status": "success", "id": g.id})
+@csrf_exempt
+
+def daily_summary_view(request, user_id):
+
+    try:
+        user = User.objects.get(id=user_id)
+
+    except User.DoesNotExist:
+
+        return JsonResponse({
+            "status": "error",
+            "message": "User not found"
+        })
+
+    today = timezone.localdate()
+
+    # 💰 TODAY EXPENSE
+    today_expense = sum(
+
+        e.amount for e in Expense.objects.filter(
+            user=user,
+            date=today
+        )
+    )
+
+    # 💵 TODAY INCOME
+    today_income = sum(
+
+        i.amount for i in Income.objects.filter(
+            user=user,
+            date=today
+        )
+    )
+
+    # ✅ TASKS
+    total_tasks = Task.objects.filter(
+        user=user
+    ).count()
+
+    completed_tasks = Task.objects.filter(
+        user=user,
+        completed=True
+    ).count()
+
+    # 🔥 HABITS
+    total_habits = Habit.objects.filter(
+        user=user
+    ).count()
+
+    completed_habits = HabitLog.objects.filter(
+        habit__user=user,
+        date=today,
+        completed=True
+    ).count()
+
+    # 😊 MOOD
+    mood = Mood.objects.filter(
+        user=user,
+        date=today
+    ).first()
+
+    mood_text = (
+        mood.mood if mood else "Not logged"
+    )
+
+    # 🧠 PRODUCTIVITY SCORE
+    productivity = 0
+
+    if total_tasks > 0:
+
+        productivity += int(
+            (completed_tasks / total_tasks)
+            * 50
+        )
+
+    if total_habits > 0:
+
+        productivity += int(
+            (completed_habits / total_habits)
+            * 50
+        )
+
+    # 🧠 AI MESSAGE
+    ai_message = (
+        "Good progress today!"
+    )
+
+    if today_expense > today_income:
+
+        ai_message = (
+            "⚠ You spent more than you earned today."
+        )
+
+    elif productivity >= 80:
+
+        ai_message = (
+            "🔥 Very productive day!"
+        )
+
+    elif productivity <= 40:
+
+        ai_message = (
+            "📉 Try improving your productivity tomorrow."
+        )
+
+    return JsonResponse({
+
+        "status": "success",
+
+        "today_expense":
+            today_expense,
+
+        "today_income":
+            today_income,
+
+        "completed_tasks":
+            completed_tasks,
+
+        "total_tasks":
+            total_tasks,
+
+        "completed_habits":
+            completed_habits,
+
+        "total_habits":
+            total_habits,
+
+        "mood":
+            mood_text,
+
+        "productivity":
+            productivity,
+
+        "ai_message":
+            ai_message,
     })

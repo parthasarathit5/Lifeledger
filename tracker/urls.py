@@ -16,6 +16,9 @@ from .views import (
     compare_view,
     smart_alerts_view,
     behavior_view,
+    alerts_view,
+    goal_view,
+    daily_summary_view,
 )
 
 urlpatterns = [
@@ -36,4 +39,8 @@ urlpatterns = [
     path('compare/<int:user_id>/', compare_view),
     path('alerts/<int:user_id>/', smart_alerts_view),
     path('behavior/<int:user_id>/', behavior_view),
+    path('alerts/<int:user_id>/',alerts_view),
+    path('goals/<int:user_id>/', goal_view),
+    path(
+    'daily-summary/<int:user_id>/',daily_summary_view),
 ]
