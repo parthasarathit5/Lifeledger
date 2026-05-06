@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Expense, Income, Habit, HabitLog, Task, Mood, History,Budget,  Achievement, Streak
+from .models import User, Expense, Income, Habit, HabitLog, Task, Mood, History,Budget,  Achievement, Streak,Goal
 
 
 @admin.register(User)
@@ -69,6 +69,7 @@ class BudgetAdmin(admin.ModelAdmin):
     ordering = ['-year', '-month']
 admin.site.register(Achievement)
 admin.site.register(Streak)
+admin.site.register(Goal)
 admin.site.site_header = "LifeTracer Admin"
 admin.site.site_title = "LifeTracer"
 admin.site.index_title = "Welcome to LifeTracer Admin Panel"

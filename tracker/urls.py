@@ -19,6 +19,7 @@ from .views import (
     alerts_view,
     goal_view,
     daily_summary_view,
+    heatmap_view,
 )
 
 urlpatterns = [
@@ -43,4 +44,8 @@ urlpatterns = [
     path('goals/<int:user_id>/', goal_view),
     path(
     'daily-summary/<int:user_id>/',daily_summary_view),
+   path(
+    'heatmap/<int:user_id>/',
+     heatmap_view,
+),
 ]

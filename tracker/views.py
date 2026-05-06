@@ -1073,3 +1073,74 @@ def daily_summary_view(request, user_id):
         "ai_message":
             ai_message,
     })
+
+@csrf_exempt
+def heatmap_view(request, user_id):
+
+    try:
+        user = User.objects.get(id=user_id)
+
+    except User.DoesNotExist:
+
+        return JsonResponse({
+            "status": "error"
+        })
+
+    today = timezone.localdate()
+
+    result = []
+
+    for i in range(30):
+
+        d = today - timedelta(days=i)
+
+        score = 0
+
+        # 🔥 HABITS
+        habits = HabitLog.objects.filter(
+            habit__user=user,
+            date=d,
+            completed=True
+        ).count()
+
+        score += habits * 2
+
+        # ✅ TASKS
+        tasks = Task.objects.filter(
+            user=user,
+            completed=True
+        ).count()
+
+        score += min(tasks, 5)
+
+        # 😊 MOOD
+        mood = Mood.objects.filter(
+            user=user,
+            date=d
+        ).exists()
+
+        if mood:
+            score += 2
+
+        # 💰 EXPENSE
+        expense = Expense.objects.filter(
+            user=user,
+            date=d
+        ).exists()
+
+        if expense:
+            score += 1
+
+        result.append({
+
+            "date": str(d),
+
+            "score": score,
+        })
+
+    return JsonResponse({
+
+        "status": "success",
+
+        "days": result
+    })

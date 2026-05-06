@@ -141,11 +141,6 @@ class Behavior(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField()
     created_at = models.DateField(auto_now_add=True)
-class Goal(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    title = models.CharField(max_length=100)
-    target_amount = models.FloatField()
-    created_at = models.DateField(auto_now_add=True)
 class Achievement(models.Model):
 
     user = models.ForeignKey(
@@ -197,3 +192,36 @@ class Streak(models.Model):
     def __str__(self):
 
         return f"{self.user.name} - {self.streak_type}"
+class Goal(models.Model):
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    title = models.CharField(
+        max_length=100
+    )
+
+    target_amount = models.FloatField()
+
+    current_amount = models.FloatField(
+        default=0
+    )
+
+    created_at = models.DateField(
+        auto_now_add=True
+    )
+
+    deadline = models.DateField(
+        null=True,
+        blank=True
+    )
+
+    completed = models.BooleanField(
+        default=False
+    )
+
+    def __str__(self):
+
+        return self.title
