@@ -146,3 +146,54 @@ class Goal(models.Model):
     title = models.CharField(max_length=100)
     target_amount = models.FloatField()
     created_at = models.DateField(auto_now_add=True)
+class Achievement(models.Model):
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    title = models.CharField(
+        max_length=100
+    )
+
+    description = models.TextField()
+
+    icon = models.CharField(
+        max_length=20,
+        default="🏆"
+    )
+
+    unlocked_at = models.DateField(
+        auto_now_add=True
+    )
+
+    def __str__(self):
+        return self.title
+class Streak(models.Model):
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    streak_type = models.CharField(
+        max_length=50
+    )
+
+    current_streak = models.IntegerField(
+        default=0
+    )
+
+    longest_streak = models.IntegerField(
+        default=0
+    )
+
+    last_updated = models.DateField(
+        null=True,
+        blank=True
+    )
+
+    def __str__(self):
+
+        return f"{self.user.name} - {self.streak_type}"
