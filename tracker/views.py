@@ -6,7 +6,7 @@ from django.utils.timezone import localtime
 from django.db.models import Sum, Count
 import json
 from datetime import date, timedelta
-from .models import User, Expense, Income, Habit, HabitLog, Task, Mood, History,Budget
+from .models import User, Expense, Income, Habit, HabitLog, Task, History,Budget,Goal,Achievement,Streak
 
 
 def save_history(user, type, title, amount=None, category="", note=""):
@@ -1143,4 +1143,196 @@ def heatmap_view(request, user_id):
         "status": "success",
 
         "days": result
+    })
+@csrf_exempt
+def networth_view(request, user_id):
+
+    try:
+        user = User.objects.get(id=user_id)
+
+    except User.DoesNotExist:
+
+        return JsonResponse({
+            "status": "error"
+        })
+
+    total_income = sum(
+
+        i.amount for i in Income.objects.filter(
+            user=user
+        )
+    )
+
+    total_expense = sum(
+
+        e.amount for e in Expense.objects.filter(
+            user=user
+        )
+    )
+
+    networth = (
+        total_income -
+        total_expense
+    )
+
+    # 📈 SAVINGS RATE
+    savings_rate = 0
+
+    if total_income > 0:
+
+        savings_rate = int(
+
+            (networth / total_income)
+            * 100
+        )
+
+    # 🧠 FINANCIAL HEALTH
+    if savings_rate >= 50:
+
+        health = "Excellent"
+
+        color = "green"
+
+    elif savings_rate >= 25:
+
+        health = "Good"
+
+        color = "blue"
+
+    elif savings_rate >= 10:
+
+        health = "Average"
+
+        color = "orange"
+
+    else:
+
+        health = "Poor"
+
+        color = "red"
+
+    # 🤖 AI MESSAGE
+    if savings_rate >= 50:
+
+        ai = (
+            "🔥 Amazing savings discipline!"
+        )
+
+    elif savings_rate >= 25:
+
+        ai = (
+            "👍 Good financial management."
+        )
+
+    else:
+
+        ai = (
+            "⚠ Try reducing expenses and saving more."
+        )
+
+    return JsonResponse({
+
+        "status": "success",
+
+        "total_income":
+            total_income,
+
+        "total_expense":
+            total_expense,
+
+        "networth":
+            networth,
+
+        "savings_rate":
+            savings_rate,
+
+        "health":
+            health,
+
+        "color":
+            color,
+
+        "ai":
+            ai,
+    })
+@csrf_exempt
+def streaks_view(request, user_id):
+
+    try:
+        user = User.objects.get(id=user_id)
+
+    except User.DoesNotExist:
+
+        return JsonResponse({
+            "status": "error"
+        })
+
+    streaks = Streak.objects.filter(
+        user=user
+    )
+
+    result = []
+
+    for s in streaks:
+
+        result.append({
+
+            "type":
+                s.streak_type,
+
+            "current":
+                s.current_streak,
+
+            "longest":
+                s.longest_streak,
+        })
+
+    return JsonResponse({
+
+        "status": "success",
+
+        "streaks":
+            result
+    })
+@csrf_exempt
+def achievements_view(request, user_id):
+
+    try:
+        user = User.objects.get(id=user_id)
+
+    except User.DoesNotExist:
+
+        return JsonResponse({
+            "status": "error"
+        })
+
+    achievements = Achievement.objects.filter(
+        user=user
+    )
+
+    result = []
+
+    for a in achievements:
+
+        result.append({
+
+            "title":
+                a.title,
+
+            "description":
+                a.description,
+
+            "icon":
+                a.icon,
+
+            "date":
+                str(a.created_at),
+        })
+
+    return JsonResponse({
+
+        "status": "success",
+
+        "achievements":
+            result
     })

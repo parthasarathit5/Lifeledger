@@ -20,6 +20,9 @@ from .views import (
     goal_view,
     daily_summary_view,
     heatmap_view,
+    networth_view,
+    streaks_view,
+    achievements_view,
 )
 
 urlpatterns = [
@@ -47,5 +50,18 @@ urlpatterns = [
    path(
     'heatmap/<int:user_id>/',
      heatmap_view,
+),
+   path(
+    'networth/<int:user_id>/',
+    networth_view,
+),
+   path(
+    'streaks/<int:user_id>/',
+    streaks_view,
+),
+
+path(
+    'achievements/<int:user_id>/',
+    achievements_view,
 ),
 ]
