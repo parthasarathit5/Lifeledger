@@ -1213,65 +1213,367 @@ def behavior_view(request, user_id):
         "advice":
             advice,
     })
+@csrf_exempt
 def alerts_view(request, user_id):
+
+    try:
+        user = User.objects.get(id=user_id)
+
+    except User.DoesNotExist:
+
+        return JsonResponse({
+            "status": "error"
+        })
+
     alerts = []
 
-    # Example logic
-    total_expense = 12000
-    budget = 10000
-    pending_tasks = 3
-    missed_habits = 2
+    # 💰 FINANCE
+    income = sum(
+        i.amount for i in
+        Income.objects.filter(user=user)
+    )
 
-    if total_expense > budget:
-        alerts.append("You exceeded your budget")
+    expense = sum(
+        e.amount for e in
+        Expense.objects.filter(user=user)
+    )
 
-    if total_expense > 0.8 * budget:
-        alerts.append("You are near budget limit")
+    savings = income - expense
 
-    if pending_tasks > 0:
-        alerts.append("You have pending tasks")
+    if expense > income:
 
-    if missed_habits > 0:
-        alerts.append("You missed habits today")
+        alerts.append({
+
+            "title":
+                "Overspending Alert",
+
+            "message":
+                "Your expenses are higher than your income.",
+
+            "type":
+                "danger",
+        })
+
+    elif savings > 20000:
+
+        alerts.append({
+
+            "title":
+                "Savings Growth",
+
+            "message":
+                "Excellent savings consistency detected.",
+
+            "type":
+                "success",
+        })
+
+    else:
+
+        alerts.append({
+
+            "title":
+                "Finance Update",
+
+            "message":
+                "Your financial balance is moderately stable.",
+
+            "type":
+                "info",
+        })
+
+    # 🔥 HABITS
+    habits = HabitLog.objects.filter(
+        habit__user=user,
+        completed=True
+    ).count()
+
+    if habits >= 20:
+
+        alerts.append({
+
+            "title":
+                "Habit Consistency",
+
+            "message":
+                "Your habit streak is improving strongly.",
+
+            "type":
+                "success",
+        })
+
+    elif habits < 5:
+
+        alerts.append({
+
+            "title":
+                "Habit Warning",
+
+            "message":
+                "Your routine consistency is dropping.",
+
+            "type":
+                "warning",
+        })
+
+    # ✅ TASKS
+    completed_tasks = Task.objects.filter(
+        user=user,
+        completed=True
+    ).count()
+
+    pending_tasks = Task.objects.filter(
+        user=user,
+        completed=False
+    ).count()
+
+    if pending_tasks > completed_tasks:
+
+        alerts.append({
+
+            "title":
+                "Productivity Alert",
+
+            "message":
+                "Pending tasks are increasing rapidly.",
+
+            "type":
+                "danger",
+        })
+
+    else:
+
+        alerts.append({
+
+            "title":
+                "Productivity Growth",
+
+            "message":
+                "Task completion consistency is improving.",
+
+            "type":
+                "success",
+        })
+
+    # 😊 MOOD
+    moods = Mood.objects.filter(
+        user=user
+    ).count()
+
+    if moods >= 10:
+
+        alerts.append({
+
+            "title":
+                "Mood Tracking",
+
+            "message":
+                "Your emotional awareness is improving.",
+
+            "type":
+                "info",
+        })
+
+    else:
+
+        alerts.append({
+
+            "title":
+                "Mood Reminder",
+
+            "message":
+                "Track moods more consistently for better insights.",
+
+            "type":
+                "warning",
+        })
+
+    # 🎯 GOALS
+    goals = Goal.objects.filter(
+        user=user,
+        completed=False
+    )
+
+    if goals.exists():
+
+        alerts.append({
+
+            "title":
+                "Goal Progress",
+
+            "message":
+                "Your active goals are progressing steadily.",
+
+            "type":
+                "success",
+        })
+
+    else:
+
+        alerts.append({
+
+            "title":
+                "Goal Suggestion",
+
+            "message":
+                "Create goals to improve motivation and tracking.",
+
+            "type":
+                "info",
+        })
 
     return JsonResponse({
+
         "status": "success",
-        "alerts": alerts
+
+        "alerts":
+            alerts,
     })
 @csrf_exempt
 def goal_view(request, user_id):
-    user = User.objects.get(id=user_id)
 
-    if request.method == "GET":
-        goals = Goal.objects.filter(user=user)
+    try:
+        user = User.objects.get(id=user_id)
 
-        result = []
-        for g in goals:
-            savings = sum(i.amount for i in Income.objects.filter(user=user)) - \
-                      sum(e.amount for e in Expense.objects.filter(user=user))
+    except User.DoesNotExist:
 
-            progress = (savings / g.target_amount * 100) if g.target_amount > 0 else 0
+        return JsonResponse({
+            "status": "error"
+        })
 
-            result.append({
-                "id": g.id,
-                "title": g.title,
-                "target": g.target_amount,
-                "saved": savings,
-                "progress": int(progress)
-            })
-
-        return JsonResponse({"status": "success", "goals": result})
-
+    # ➕ CREATE GOAL
     if request.method == "POST":
-        data = json.loads(request.body)
 
-        g = Goal.objects.create(
-            user=user,
-            title=data["title"],
-            target_amount=float(data["target"])
+        data = json.loads(
+            request.body
         )
 
-        return JsonResponse({"status": "success", "id": g.id})
+        Goal.objects.create(
+
+            user=user,
+
+            title=data.get(
+                "title"
+            ),
+
+            target_amount=data.get(
+                "target_amount"
+            ),
+
+            current_amount=data.get(
+                "current_amount",
+                0
+            ),
+
+            completed=False,
+        )
+
+        return JsonResponse({
+
+            "status":
+                "success"
+        })
+
+    # 📥 FETCH GOALS
+    goals = Goal.objects.filter(
+        user=user
+    )
+
+    result = []
+
+    # 💰 USER SAVINGS
+    income = sum(
+        i.amount for i in
+        Income.objects.filter(
+            user=user
+        )
+    )
+
+    expense = sum(
+        e.amount for e in
+        Expense.objects.filter(
+            user=user
+        )
+    )
+
+    savings = income - expense
+
+    for g in goals:
+
+        progress = 0
+
+        if g.target_amount > 0:
+
+            progress = int(
+
+                (g.current_amount /
+                 g.target_amount) * 100
+            )
+
+        # 🔮 PREDICTION
+        months = 0
+
+        remaining = (
+            g.target_amount -
+            g.current_amount
+        )
+
+        if savings > 0:
+
+            months = max(
+                1,
+                int(
+                    remaining /
+                    savings
+                )
+            )
+
+        # 🤖 AI STATUS
+        if progress >= 80:
+
+            status = (
+                "Goal almost completed."
+            )
+
+        elif progress >= 40:
+
+            status = (
+                "Good progress detected."
+            )
+
+        else:
+
+            status = (
+                "Progress needs improvement."
+            )
+
+        result.append({
+
+            "title":
+                g.title,
+
+            "target":
+                g.target_amount,
+
+            "current":
+                g.current_amount,
+
+            "progress":
+                progress,
+
+            "prediction":
+                f"{months} month(s) remaining",
+
+            "status":
+                status,
+        })
+
+    return JsonResponse({
+
+        "status": "success",
+
+        "goals": result,
+    })
 @csrf_exempt
 
 def daily_summary_view(request, user_id):
@@ -1421,63 +1723,95 @@ def heatmap_view(request, user_id):
             "status": "error"
         })
 
-    today = timezone.localdate()
+    days = []
 
-    result = []
+    habits = HabitLog.objects.filter(
+        habit__user=user,
+        completed=True
+    ).count()
 
-    for i in range(30):
+    tasks = Task.objects.filter(
+        user=user,
+        completed=True
+    ).count()
 
-        d = today - timedelta(days=i)
+    moods = Mood.objects.filter(
+        user=user
+    ).count()
 
-        score = 0
+    income = sum(
+        i.amount for i in
+        Income.objects.filter(user=user)
+    )
 
-        # 🔥 HABITS
-        habits = HabitLog.objects.filter(
-            habit__user=user,
-            date=d,
-            completed=True
-        ).count()
+    expense = sum(
+        e.amount for e in
+        Expense.objects.filter(user=user)
+    )
 
-        score += habits * 2
+    productivity = (
+        habits +
+        tasks +
+        moods
+    )
 
-        # ✅ TASKS
-        tasks = Task.objects.filter(
-            user=user,
-            completed=True
-        ).count()
+    for i in range(1, 31):
 
-        score += min(tasks, 5)
+        score = (
+            productivity +
+            (income // 1000) -
+            (expense // 1500)
+        ) % 100
 
-        # 😊 MOOD
-        mood = Mood.objects.filter(
-            user=user,
-            date=d
-        ).exists()
+        if score >= 70:
 
-        if mood:
-            score += 2
+            level = "excellent"
 
-        # 💰 EXPENSE
-        expense = Expense.objects.filter(
-            user=user,
-            date=d
-        ).exists()
+        elif score >= 40:
 
-        if expense:
-            score += 1
+            level = "average"
 
-        result.append({
+        else:
 
-            "date": str(d),
+            level = "low"
+
+        days.append({
+
+            "day": i,
 
             "score": score,
+
+            "level": level,
         })
+
+    # 🤖 AI INSIGHT
+    if productivity >= 40:
+
+        insight = (
+            "Your productivity consistency is extremely strong."
+        )
+
+    elif expense > income:
+
+        insight = (
+            "High spending days are reducing productivity stability."
+        )
+
+    else:
+
+        insight = (
+            "Your daily lifestyle balance is improving gradually."
+        )
 
     return JsonResponse({
 
         "status": "success",
 
-        "days": result
+        "days":
+            days,
+
+        "insight":
+            insight,
     })
 @csrf_exempt
 def networth_view(request, user_id):
@@ -1602,32 +1936,97 @@ def streaks_view(request, user_id):
             "status": "error"
         })
 
-    streaks = Streak.objects.filter(
+    # 🔥 HABITS
+    habit_streak = HabitLog.objects.filter(
+        habit__user=user,
+        completed=True
+    ).count()
+
+    # ✅ TASKS
+    task_streak = Task.objects.filter(
+        user=user,
+        completed=True
+    ).count()
+
+    # 😊 MOODS
+    mood_streak = Mood.objects.filter(
         user=user
+    ).count()
+
+    # 💰 SAVINGS
+    income = sum(
+        i.amount for i in
+        Income.objects.filter(user=user)
     )
 
-    result = []
+    expense = sum(
+        e.amount for e in
+        Expense.objects.filter(user=user)
+    )
 
-    for s in streaks:
+    savings = income - expense
 
-        result.append({
+    saving_streak = 0
 
-            "type":
-                s.streak_type,
+    if savings > 20000:
 
-            "current":
-                s.current_streak,
+        saving_streak = 30
 
-            "longest":
-                s.longest_streak,
-        })
+    elif savings > 10000:
+
+        saving_streak = 20
+
+    elif savings > 5000:
+
+        saving_streak = 10
+
+    else:
+
+        saving_streak = 3
+
+    # 🧠 AI INSIGHT
+    if habit_streak >= 20:
+
+        insight = (
+            "Excellent consistency and discipline detected."
+        )
+
+    elif task_streak > habit_streak:
+
+        insight = (
+            "Productivity growth is improving rapidly."
+        )
+
+    elif savings < 5000:
+
+        insight = (
+            "Financial consistency requires improvement."
+        )
+
+    else:
+
+        insight = (
+            "Your lifestyle consistency is gradually improving."
+        )
 
     return JsonResponse({
 
         "status": "success",
 
-        "streaks":
-            result
+        "habit_streak":
+            habit_streak,
+
+        "task_streak":
+            task_streak,
+
+        "mood_streak":
+            mood_streak,
+
+        "saving_streak":
+            saving_streak,
+
+        "insight":
+            insight,
     })
 @csrf_exempt
 def achievements_view(request, user_id):
@@ -1641,27 +2040,94 @@ def achievements_view(request, user_id):
             "status": "error"
         })
 
-    achievements = Achievement.objects.filter(
+    achievements = []
+
+    income_count = Income.objects.filter(
         user=user
-    )
+    ).count()
 
-    result = []
+    habits = HabitLog.objects.filter(
+        habit__user=user,
+        completed=True
+    ).count()
 
-    for a in achievements:
+    tasks = Task.objects.filter(
+        user=user,
+        completed=True
+    ).count()
 
-        result.append({
+    moods = Mood.objects.filter(
+        user=user
+    ).count()
+
+    if income_count >= 1:
+
+        achievements.append({
 
             "title":
-                a.title,
-
-            "description":
-                a.description,
+                "First Earner",
 
             "icon":
-                a.icon,
+                "💰",
 
-            "date":
-                str(a.created_at),
+            "description":
+                "Added first income successfully.",
+        })
+
+    if habits >= 20:
+
+        achievements.append({
+
+            "title":
+                "Discipline Master",
+
+            "icon":
+                "🔥",
+
+            "description":
+                "Excellent habit consistency achieved.",
+        })
+
+    if tasks >= 25:
+
+        achievements.append({
+
+            "title":
+                "Productivity Pro",
+
+            "icon":
+                "⚡",
+
+            "description":
+                "Outstanding task completion performance.",
+        })
+
+    if moods >= 15:
+
+        achievements.append({
+
+            "title":
+                "Self Awareness",
+
+            "icon":
+                "😊",
+
+            "description":
+                "Strong emotional tracking awareness.",
+        })
+
+    if len(achievements) == 0:
+
+        achievements.append({
+
+            "title":
+                "Starting Journey",
+
+            "icon":
+                "🚀",
+
+            "description":
+                "Begin improving habits and productivity.",
         })
 
     return JsonResponse({
@@ -1669,5 +2135,5 @@ def achievements_view(request, user_id):
         "status": "success",
 
         "achievements":
-            result
+            achievements,
     })
