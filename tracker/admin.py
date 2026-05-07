@@ -1,7 +1,5 @@
 from django.contrib import admin
-from .models import User, Expense, Income, Habit, HabitLog, Task, Mood, History,Budget,  Achievement, Streak,Goal
-
-
+from .models import User, Expense, Income, Habit, HabitLog, Task, Mood, History,Budget,  Achievement, Streak,Goal,PasswordResetOTP
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'email', 'created_at']
@@ -70,6 +68,9 @@ class BudgetAdmin(admin.ModelAdmin):
 admin.site.register(Achievement)
 admin.site.register(Streak)
 admin.site.register(Goal)
+admin.site.register(
+    PasswordResetOTP
+)
 admin.site.site_header = "LifeTracer Admin"
 admin.site.site_title = "LifeTracer"
 admin.site.index_title = "Welcome to LifeTracer Admin Panel"

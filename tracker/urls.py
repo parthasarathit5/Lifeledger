@@ -23,6 +23,9 @@ from .views import (
     networth_view,
     streaks_view,
     achievements_view,
+     reset_password_view,
+      verify_otp_view,
+      forgot_password_view,
 )
 
 urlpatterns = [
@@ -63,5 +66,19 @@ urlpatterns = [
 path(
     'achievements/<int:user_id>/',
     achievements_view,
+),
+path(
+    'forgot-password/',
+    forgot_password_view
+),
+
+path(
+    'verify-otp/',
+    verify_otp_view
+),
+
+path(
+    'reset-password/',
+    reset_password_view
 ),
 ]

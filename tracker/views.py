@@ -5,6 +5,8 @@ from django.utils import timezone
 from django.utils.timezone import localtime
 from django.db.models import Sum, Count
 import json
+from django.core.mail import send_mail
+import random
 from datetime import date, timedelta
 from .models import User, Expense, Income, Habit, HabitLog, Task, History,Budget,Goal,Achievement,Streak
 
@@ -2137,3 +2139,138 @@ def achievements_view(request, user_id):
         "achievements":
             achievements,
     })
+@csrf_exempt
+def forgot_password_view(request):
+
+    if request.method == "POST":
+
+        data = json.loads(
+            request.body
+        )
+
+        email = data.get("email")
+
+        print("EMAIL:", email)
+
+        try:
+
+            user = User.objects.get(
+                email=email
+            )
+
+            print("USER FOUND")
+
+        except User.DoesNotExist:
+
+            print("USER NOT FOUND")
+
+            return JsonResponse({
+
+                "status":
+                    "error",
+
+                "message":
+                    "Email not found"
+            })
+
+        otp = str(
+            random.randint(
+                100000,
+                999999
+            )
+        )
+
+        print("OTP:", otp)
+
+        PasswordResetOTP.objects.create(
+
+            email=email,
+
+            otp=otp
+        )
+
+        send_mail(
+
+            'LifeLedger OTP',
+
+            f'Your OTP is {otp}',
+
+            EMAIL_HOST_USER,
+
+            [email],
+
+            fail_silently=False,
+        )
+
+        print("MAIL SENT")
+
+        return JsonResponse({
+
+            "status":
+                "success"
+        })
+@csrf_exempt
+def verify_otp_view(request):
+
+    data = json.loads(
+        request.body
+    )
+
+    email = data.get("email")
+
+    otp = data.get("otp")
+
+    exists = PasswordResetOTP.objects.filter(
+
+        email=email,
+
+        otp=otp
+    ).exists()
+
+    if exists:
+
+        return JsonResponse({
+
+            "status":
+                "success"
+        })
+
+    return JsonResponse({
+
+        "status":
+            "error"
+    })
+@csrf_exempt
+def reset_password_view(request):
+
+    data = json.loads(
+        request.body
+    )
+
+    email = data.get("email")
+
+    password = data.get("password")
+
+    try:
+
+        user = User.objects.get(
+            email=email
+        )
+
+        user.password = password
+
+        user.save()
+
+        return JsonResponse({
+
+            "status":
+                "success"
+        })
+
+    except:
+
+        return JsonResponse({
+
+            "status":
+                "error"
+        })
