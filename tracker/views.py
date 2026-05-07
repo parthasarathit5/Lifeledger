@@ -792,86 +792,173 @@ def predictor_view(request, user_id):
 # ============================================================
 @csrf_exempt
 def compare_view(request, user_id):
+
     try:
         user = User.objects.get(id=user_id)
+
     except User.DoesNotExist:
-        return JsonResponse({"status": "error", "message": "User not found"})
 
-    today = timezone.localdate()
+        return JsonResponse({
+            "status": "error"
+        })
 
-    # This month
-    this_expense = sum(e.amount for e in Expense.objects.filter(
-        user=user, date__month=today.month, date__year=today.year))
-    this_income = sum(i.amount for i in Income.objects.filter(
-        user=user, date__month=today.month, date__year=today.year))
-    this_tasks = Task.objects.filter(
-        user=user, completed=True, completed_at__month=today.month,
-        completed_at__year=today.year).count()
-    this_habits = HabitLog.objects.filter(
-        habit__user=user, date__month=today.month,
-        date__year=today.year, completed=True).count()
-    this_mood = Mood.objects.filter(
-        user=user, date__month=today.month,
-        date__year=today.year).first()
+    # 💰 FINANCE
+    income = sum(
+        i.amount for i in
+        Income.objects.filter(user=user)
+    )
 
-    # Last month
-    last_month = today.replace(day=1) - timedelta(days=1)
-    last_expense = sum(e.amount for e in Expense.objects.filter(
-        user=user, date__month=last_month.month, date__year=last_month.year))
-    last_income = sum(i.amount for i in Income.objects.filter(
-        user=user, date__month=last_month.month, date__year=last_month.year))
-    last_tasks = Task.objects.filter(
-        user=user, completed=True, completed_at__month=last_month.month,
-        completed_at__year=last_month.year).count()
-    last_habits = HabitLog.objects.filter(
-        habit__user=user, date__month=last_month.month,
-        date__year=last_month.year, completed=True).count()
+    expense = sum(
+        e.amount for e in
+        Expense.objects.filter(user=user)
+    )
 
-    def diff_label(current, previous):
-        if previous == 0:
-            return "No data last month"
-        diff = current - previous
-        pct = abs(int(diff / previous * 100))
-        if diff > 0:
-            return f"↑ {pct}% more than last month"
-        elif diff < 0:
-            return f"↓ {pct}% less than last month"
-        return "Same as last month"
+    savings = income - expense
+
+    # 🔥 HABITS
+    habits = HabitLog.objects.filter(
+        habit__user=user,
+        completed=True
+    ).count()
+
+    # ✅ TASKS
+    tasks = Task.objects.filter(
+        user=user,
+        completed=True
+    ).count()
+
+    # 😊 MOODS
+    moods = Mood.objects.filter(
+        user=user
+    ).count()
+
+    # 📈 COMPARISON ENGINE
+    if savings >= 20000:
+
+        savings_msg = (
+            "Savings improved significantly."
+        )
+
+    elif savings >= 5000:
+
+        savings_msg = (
+            "Savings are stable."
+        )
+
+    else:
+
+        savings_msg = (
+            "Savings growth is low."
+        )
+
+    if expense > income:
+
+        expense_msg = (
+            "Expenses are higher than income."
+        )
+
+    else:
+
+        expense_msg = (
+            "Expense control looks healthy."
+        )
+
+    if habits >= 20:
+
+        habit_msg = (
+            "Habit consistency improved strongly."
+        )
+
+    elif habits >= 10:
+
+        habit_msg = (
+            "Habit routine is moderately stable."
+        )
+
+    else:
+
+        habit_msg = (
+            "Habit consistency needs improvement."
+        )
+
+    if tasks >= 20:
+
+        task_msg = (
+            "Excellent productivity trend."
+        )
+
+    elif tasks >= 10:
+
+        task_msg = (
+            "Task completion improving gradually."
+        )
+
+    else:
+
+        task_msg = (
+            "Low productivity consistency."
+        )
+
+    if moods >= 15:
+
+        mood_msg = (
+            "Strong emotional awareness detected."
+        )
+
+    elif moods >= 5:
+
+        mood_msg = (
+            "Mood tracking improving."
+        )
+
+    else:
+
+        mood_msg = (
+            "Very little mood tracking data."
+        )
+
+    # 🤖 AI INSIGHT
+    if savings > 20000 and habits > 20:
+
+        insight = (
+            "Your financial discipline and "
+            "productivity are improving together."
+        )
+
+    elif expense > income:
+
+        insight = (
+            "Overspending may affect long-term "
+            "financial stability."
+        )
+
+    else:
+
+        insight = (
+            "Your lifestyle balance is improving gradually."
+        )
 
     return JsonResponse({
+
         "status": "success",
-        "this_month": today.strftime("%B %Y"),
-        "last_month": last_month.strftime("%B %Y"),
-        "expense": {
-            "this": this_expense,
-            "last": last_expense,
-            "diff": diff_label(this_expense, last_expense),
-            "better": this_expense <= last_expense,
-        },
-        "income": {
-            "this": this_income,
-            "last": last_income,
-            "diff": diff_label(this_income, last_income),
-            "better": this_income >= last_income,
-        },
-        "savings": {
-            "this": this_income - this_expense,
-            "last": last_income - last_expense,
-            "diff": diff_label(this_income - this_expense, last_income - last_expense),
-            "better": (this_income - this_expense) >= (last_income - last_expense),
-        },
-        "tasks": {
-            "this": this_tasks,
-            "last": last_tasks,
-            "diff": diff_label(this_tasks, last_tasks),
-            "better": this_tasks >= last_tasks,
-        },
-        "habits": {
-            "this": this_habits,
-            "last": last_habits,
-            "diff": diff_label(this_habits, last_habits),
-            "better": this_habits >= last_habits,
-        },
+
+        "savings":
+            savings_msg,
+
+        "expense":
+            expense_msg,
+
+        "habits":
+            habit_msg,
+
+        "tasks":
+            task_msg,
+
+        "mood":
+            mood_msg,
+
+        "insight":
+            insight,
     })
 @csrf_exempt
 def smart_alerts_view(request, user_id):
@@ -941,145 +1028,167 @@ def behavior_view(request, user_id):
             "status": "error"
         })
 
-    incomes = Income.objects.filter(
-        user=user
+    income = sum(
+        i.amount for i in
+        Income.objects.filter(user=user)
     )
 
-    expenses = Expense.objects.filter(
-        user=user
+    expense = sum(
+        e.amount for e in
+        Expense.objects.filter(user=user)
     )
 
-    habits = Habit.objects.filter(
-        user=user
-    )
-
-    tasks = Task.objects.filter(
-        user=user
-    )
-
-    moods = Mood.objects.filter(
-        user=user
-    )
-
-    total_income = sum(
-        i.amount for i in incomes
-    )
-
-    total_expense = sum(
-        e.amount for e in expenses
-    )
-
-    savings = (
-        total_income -
-        total_expense
-    )
-
-    completed_habits = HabitLog.objects.filter(
-        habit__user=user,
-        completed=True
-    ).count()
+    savings = income - expense
 
     completed_tasks = Task.objects.filter(
         user=user,
         completed=True
     ).count()
 
-    # 🧠 PERSONALITY
+    pending_tasks = Task.objects.filter(
+        user=user,
+        completed=False
+    ).count()
+
+    completed_habits = HabitLog.objects.filter(
+        habit__user=user,
+        completed=True
+    ).count()
+
+    moods = Mood.objects.filter(
+        user=user
+    ).count()
+
+    # 🧠 PERSONALITY ENGINE
+    if savings > 30000 and completed_habits > 20:
+
+        personality = (
+            "Strategic Achiever"
+        )
+
+    elif expense > income:
+
+        personality = (
+            "Risky Spender"
+        )
+
+    elif completed_tasks > 20:
+
+        personality = (
+            "Productivity Focused"
+        )
+
+    elif moods > 10:
+
+        personality = (
+            "Emotionally Aware"
+        )
+
+    else:
+
+        personality = (
+            "Balanced Explorer"
+        )
+
+    # 🔥 FINANCE ANALYSIS
     if savings > 20000:
 
-        personality = "Smart Saver"
-
-    elif total_expense > total_income:
-
-        personality = "Impulsive Spender"
-
-    elif completed_habits > 15:
-
-        personality = "Disciplined Achiever"
-
-    else:
-
-        personality = "Balanced User"
-
-    # 🔥 DISCIPLINE SCORE
-    discipline = (
-        completed_habits +
-        completed_tasks
-    )
-
-    if discipline >= 25:
-
-        discipline_msg = (
-            "Excellent consistency and discipline"
+        finance = (
+            "Excellent savings discipline detected."
         )
 
-    elif discipline >= 10:
+    elif savings > 5000:
 
-        discipline_msg = (
-            "Moderate productivity pattern"
+        finance = (
+            "Moderate financial stability."
         )
 
     else:
 
-        discipline_msg = (
-            "Low consistency detected"
+        finance = (
+            "Savings growth needs improvement."
         )
 
-    # ⚠ SPENDING PATTERN
-    if total_expense > (
-        total_income * 0.8
-    ):
+    # 🔥 PRODUCTIVITY ANALYSIS
+    if completed_tasks > pending_tasks:
 
-        spending = (
-            "High spending pattern detected"
-        )
-
-    elif total_expense > (
-        total_income * 0.5
-    ):
-
-        spending = (
-            "Balanced spending behavior"
+        productivity = (
+            "Strong productivity consistency."
         )
 
     else:
 
-        spending = (
-            "Strong saving behavior"
+        productivity = (
+            "Task completion rate is low."
+        )
+
+    # 🔥 HABIT ANALYSIS
+    if completed_habits >= 25:
+
+        habits = (
+            "Outstanding habit consistency."
+        )
+
+    elif completed_habits >= 10:
+
+        habits = (
+            "Good routine stability."
+        )
+
+    else:
+
+        habits = (
+            "Habits require stronger consistency."
         )
 
     # 😊 MOOD ANALYSIS
-    mood_msg = (
-        "Mood data insufficient"
-    )
+    if moods >= 15:
 
-    if moods.exists():
-
-        mood_msg = (
-            "Mood tracking indicates emotional awareness"
+        mood = (
+            "Excellent emotional tracking awareness."
         )
 
-    # 🤖 AI ADVICE
-    if total_expense > total_income:
+    elif moods >= 5:
+
+        mood = (
+            "Moderate emotional awareness."
+        )
+
+    else:
+
+        mood = (
+            "Mood tracking data insufficient."
+        )
+
+    # 🤖 AI RECOMMENDATION
+    if expense > income:
 
         advice = (
-            "Focus on reducing unnecessary expenses "
-            "and improving financial discipline."
+            "Your spending trend is risky. "
+            "Reduce unnecessary expenses "
+            "to avoid financial instability."
+        )
+
+    elif pending_tasks > completed_tasks:
+
+        advice = (
+            "Improving task completion consistency "
+            "can significantly improve productivity."
         )
 
     elif completed_habits >= 20:
 
         advice = (
-            "Your consistency habits are excellent. "
-            "Maintain this routine for long-term success."
+            "Your discipline level is excellent. "
+            "Maintain this consistency for long-term success."
         )
 
     else:
 
         advice = (
-            "Small daily improvements in habits and "
-            "expense control can significantly improve "
-            "your lifestyle balance."
+            "Small daily improvements across habits, "
+            "finance, and productivity will create "
+            "major long-term growth."
         )
 
     return JsonResponse({
@@ -1089,14 +1198,17 @@ def behavior_view(request, user_id):
         "personality":
             personality,
 
-        "discipline":
-            discipline_msg,
+        "finance":
+            finance,
 
-        "spending":
-            spending,
+        "productivity":
+            productivity,
+
+        "habits":
+            habits,
 
         "mood":
-            mood_msg,
+            mood,
 
         "advice":
             advice,
