@@ -300,33 +300,104 @@ def task_view(request, user_id):
         Task.objects.filter(id=data.get("id"), user=user).delete()
         return JsonResponse({"status": "success"})
 
-
 @csrf_exempt
 def mood_view(request, user_id):
-    try:
-        user = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        return JsonResponse({"status": "error", "message": "User not found"})
-    if request.method == "GET":
-        moods = Mood.objects.filter(user=user).order_by('-date')[:30]
-        return JsonResponse({
-            "status": "success",
-            "moods": [{"id": m.id, "mood": m.mood, "note": m.note, "date": str(m.date)}
-                      for m in moods]
-        })
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-        except:
-            return JsonResponse({"status": "error", "message": "Invalid request"})
-        mood = data.get("mood")
-        note = data.get("note", "")
-        if not mood:
-            return JsonResponse({"status": "error", "message": "Mood required"})
-        mood_obj = Mood.objects.create(user=user, mood=mood, note=note)
-        save_history(user=user, type='mood', title=f"Mood logged: {mood}", note=note)
-        return JsonResponse({"status": "success", "id": mood_obj.id})
 
+    try:
+
+        user = User.objects.get(
+            id=user_id
+        )
+
+    except User.DoesNotExist:
+
+        return JsonResponse({
+
+            "status":
+                "error",
+
+            "message":
+                "User not found"
+        })
+
+    # 📥 FETCH MOODS
+    if request.method == "GET":
+
+        moods = Mood.objects.filter(
+            user=user
+        ).order_by("-date")
+
+        mood_list = []
+
+        for m in moods:
+
+            mood_list.append({
+
+                "mood":
+                    m.mood,
+
+                "note":
+                    m.note,
+
+                "date":
+                    str(m.date),
+            })
+
+        return JsonResponse({
+
+            "status":
+                "success",
+
+            "moods":
+                mood_list,
+        })
+
+    # ➕ ADD MOOD
+    elif request.method == "POST":
+
+        try:
+
+            data = json.loads(
+                request.body
+            )
+
+            Mood.objects.create(
+
+                user=user,
+
+                mood=data.get(
+                    "mood"
+                ),
+
+                note=data.get(
+                    "note", ""
+                ),
+            )
+
+            return JsonResponse({
+
+                "status":
+                    "success"
+            })
+
+        except Exception as e:
+
+            print("MOOD POST ERROR:", e)
+
+            return JsonResponse({
+
+                "status":
+                    "error",
+
+                "message":
+                    "Unable to save mood"
+            })
+
+    return JsonResponse({
+
+        "status":
+            "error"
+    })
 
 @csrf_exempt
 def history_view(request, user_id):
