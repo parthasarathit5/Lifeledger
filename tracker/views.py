@@ -323,34 +323,48 @@ def mood_view(request, user_id):
     # 📥 FETCH MOODS
     if request.method == "GET":
 
-        moods = Mood.objects.filter(
-            user=user
-        ).order_by("-date")
+        try:
 
-        mood_list = []
+            moods = Mood.objects.filter(
+                user=user
+            ).order_by("-date")
 
-        for m in moods:
+            mood_list = []
 
-            mood_list.append({
+            for m in moods:
 
-                "mood":
-                    m.mood,
+                mood_list.append({
 
-                "note":
-                    m.note,
+                    "mood":
+                        m.mood,
 
-                "date":
-                    str(m.date),
+                    "note":
+                        m.note,
+
+                    "date":
+                        str(m.date),
+                })
+
+            return JsonResponse({
+
+                "status":
+                    "success",
+
+                "moods":
+                    mood_list,
             })
 
-        return JsonResponse({
+        except Exception as e:
 
-            "status":
-                "success",
+            print("MOOD GET ERROR:", e)
 
-            "moods":
-                mood_list,
-        })
+            return JsonResponse({
+
+                "status":
+                    "error",
+
+                "moods": [],
+            })
 
     # ➕ ADD MOOD
     elif request.method == "POST":
