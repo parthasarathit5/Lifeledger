@@ -428,126 +428,103 @@ def life_score_view(request, user_id):
     except User.DoesNotExist:
 
         return JsonResponse({
-            "status": "error"
+
+            "score": 0,
+
+            "insight":
+                "User not found."
         })
 
-    # 💰 FINANCE SCORE
     income = sum(
-        i.amount
-        for i in Income.objects.filter(
+
+        i.amount for i in
+        Income.objects.filter(
             user=user
         )
     )
 
     expense = sum(
-        e.amount
-        for e in Expense.objects.filter(
+
+        e.amount for e in
+        Expense.objects.filter(
             user=user
         )
     )
 
-    savings = income - expense
+    habits = HabitLog.objects.filter(
 
-    if savings > 20000:
-
-        finance_score = 25
-
-    elif savings > 10000:
-
-        finance_score = 20
-
-    elif savings > 5000:
-
-        finance_score = 15
-
-    else:
-
-        finance_score = 10
-
-    # 🔥 HABITS SCORE
-    habits_completed = HabitLog.objects.filter(
         habit__user=user,
+
         completed=True
     ).count()
 
-    habits_score = min(25, habits_completed)
+    tasks = Task.objects.filter(
 
-    # ✅ PRODUCTIVITY SCORE
-    tasks_completed = Task.objects.filter(
         user=user,
+
         completed=True
     ).count()
 
-    productivity_score = min(
-        25,
-        tasks_completed
-    )
-
-    # 😊 MOOD SCORE
-    mood_entries = Mood.objects.filter(
+    moods = Mood.objects.filter(
         user=user
     ).count()
 
-    mood_score = min(25, mood_entries * 2)
+    savings = income - expense
 
-    # 🏆 TOTAL
-    total_score = (
+    score = 0
 
-        finance_score +
+    # 💰 FINANCE
+    if savings > 0:
 
-        habits_score +
+        score += 30
 
-        productivity_score +
+    elif income > 0:
 
-        mood_score
-    )
+        score += 15
 
-    # 🤖 AI MESSAGE
-    if total_score >= 85:
+    # 🔥 HABITS
+    score += min(habits, 20)
 
-        message = (
-            "🔥 Excellent life balance detected."
+    # ✅ TASKS
+    score += min(tasks, 25)
+
+    # 😊 MOODS
+    score += min(moods, 25)
+
+    score = min(score, 100)
+
+    # 🤖 AI INSIGHT
+    if score >= 80:
+
+        insight = (
+            "Excellent lifestyle balance and productivity detected."
         )
 
-    elif total_score >= 65:
+    elif score >= 50:
 
-        message = (
-            "👍 Good overall lifestyle consistency."
+        insight = (
+            "Your habits and financial behavior are improving steadily."
         )
 
-    elif total_score >= 40:
+    elif score >= 20:
 
-        message = (
-            "📈 Your lifestyle is improving gradually."
+        insight = (
+            "Growth has started, but more consistency is needed."
         )
 
     else:
 
-        message = (
-            "⚠ Focus on habits, mood, and savings improvement."
+        insight = (
+            "Start tracking activities to unlock advanced AI analysis."
         )
 
     return JsonResponse({
 
-        "status": "success",
+        "score":
+            score,
 
-        "total_score":
-            total_score,
-
-        "finance":
-            finance_score,
-
-        "habits":
-            habits_score,
-
-        "productivity":
-            productivity_score,
-
-        "mood":
-            mood_score,
-
-        "message":
-            message,
+        "insight":
+            insight,
     })
 # ============================================================
 # NEW FEATURE 3 — BUDGET PLANNER
@@ -1577,7 +1554,6 @@ def goal_view(request, user_id):
         "goals": result,
     })
 @csrf_exempt
-
 def daily_summary_view(request, user_id):
 
     try:
@@ -1586,235 +1562,327 @@ def daily_summary_view(request, user_id):
     except User.DoesNotExist:
 
         return JsonResponse({
-            "status": "error",
-            "message": "User not found"
+
+            "status":
+                "error",
+
+            "summary":
+                "User not found."
         })
 
-    today = timezone.localdate()
+    # 💰 FINANCE
+    income = sum(
 
-    # 💰 TODAY EXPENSE
-    today_expense = sum(
-
-        e.amount for e in Expense.objects.filter(
-            user=user,
-            date=today
+        i.amount for i in
+        Income.objects.filter(
+            user=user
         )
     )
 
-    # 💵 TODAY INCOME
-    today_income = sum(
+    expense = sum(
 
-        i.amount for i in Income.objects.filter(
-            user=user,
-            date=today
+        e.amount for e in
+        Expense.objects.filter(
+            user=user
         )
     )
 
-    # ✅ TASKS
-    total_tasks = Task.objects.filter(
-        user=user
-    ).count()
-
-    completed_tasks = Task.objects.filter(
-        user=user,
-        completed=True
-    ).count()
+    savings = income - expense
 
     # 🔥 HABITS
-    total_habits = Habit.objects.filter(
-        user=user
-    ).count()
-
-    completed_habits = HabitLog.objects.filter(
-        habit__user=user,
-        date=today,
-        completed=True
-    ).count()
-
-    # 😊 MOOD
-    mood = Mood.objects.filter(
-        user=user,
-        date=today
-    ).first()
-
-    mood_text = (
-        mood.mood if mood else "Not logged"
-    )
-
-    # 🧠 PRODUCTIVITY SCORE
-    productivity = 0
-
-    if total_tasks > 0:
-
-        productivity += int(
-            (completed_tasks / total_tasks)
-            * 50
-        )
-
-    if total_habits > 0:
-
-        productivity += int(
-            (completed_habits / total_habits)
-            * 50
-        )
-
-    # 🧠 AI MESSAGE
-    ai_message = (
-        "Good progress today!"
-    )
-
-    if today_expense > today_income:
-
-        ai_message = (
-            "⚠ You spent more than you earned today."
-        )
-
-    elif productivity >= 80:
-
-        ai_message = (
-            "🔥 Very productive day!"
-        )
-
-    elif productivity <= 40:
-
-        ai_message = (
-            "📉 Try improving your productivity tomorrow."
-        )
-
-    return JsonResponse({
-
-        "status": "success",
-
-        "today_expense":
-            today_expense,
-
-        "today_income":
-            today_income,
-
-        "completed_tasks":
-            completed_tasks,
-
-        "total_tasks":
-            total_tasks,
-
-        "completed_habits":
-            completed_habits,
-
-        "total_habits":
-            total_habits,
-
-        "mood":
-            mood_text,
-
-        "productivity":
-            productivity,
-
-        "ai_message":
-            ai_message,
-    })
-
-@csrf_exempt
-def heatmap_view(request, user_id):
-
-    try:
-        user = User.objects.get(id=user_id)
-
-    except User.DoesNotExist:
-
-        return JsonResponse({
-            "status": "error"
-        })
-
-    days = []
-
     habits = HabitLog.objects.filter(
+
         habit__user=user,
+
         completed=True
     ).count()
 
+    # ✅ TASKS
     tasks = Task.objects.filter(
+
         user=user,
+
         completed=True
     ).count()
 
+    # 😊 MOODS
     moods = Mood.objects.filter(
         user=user
     ).count()
 
-    income = sum(
-        i.amount for i in
-        Income.objects.filter(user=user)
-    )
+    # 🎯 GOALS
+    goals = Goal.objects.filter(
+        user=user
+    ).count()
 
-    expense = sum(
-        e.amount for e in
-        Expense.objects.filter(user=user)
-    )
+    # 🤖 AI SUMMARY
+    summary_parts = []
 
-    productivity = (
-        habits +
-        tasks +
-        moods
-    )
+    # FINANCE
+    if income == 0 and expense == 0:
 
-    for i in range(1, 31):
+        summary_parts.append(
 
-        score = (
-            productivity +
-            (income // 1000) -
-            (expense // 1500)
-        ) % 100
+            "💰 Start tracking income and expenses to unlock financial AI insights."
+        )
 
-        if score >= 70:
+    elif savings > 20000:
 
-            level = "excellent"
+        summary_parts.append(
 
-        elif score >= 40:
-
-            level = "average"
-
-        else:
-
-            level = "low"
-
-        days.append({
-
-            "day": i,
-
-            "score": score,
-
-            "level": level,
-        })
-
-    # 🤖 AI INSIGHT
-    if productivity >= 40:
-
-        insight = (
-            "Your productivity consistency is extremely strong."
+            "📈 Strong savings growth detected this period."
         )
 
     elif expense > income:
 
-        insight = (
-            "High spending days are reducing productivity stability."
+        summary_parts.append(
+
+            "⚠ Expenses are currently higher than income."
         )
 
     else:
 
-        insight = (
-            "Your daily lifestyle balance is improving gradually."
+        summary_parts.append(
+
+            "💰 Financial balance is moderately stable."
         )
+
+    # HABITS
+    if habits >= 20:
+
+        summary_parts.append(
+
+            "🔥 Excellent habit consistency detected."
+        )
+
+    elif habits > 0:
+
+        summary_parts.append(
+
+            "🔥 Your routines are gradually improving."
+        )
+
+    else:
+
+        summary_parts.append(
+
+            "🔥 Add habits to build consistency tracking."
+        )
+
+    # TASKS
+    if tasks >= 15:
+
+        summary_parts.append(
+
+            "✅ Productivity performance is improving rapidly."
+        )
+
+    elif tasks > 0:
+
+        summary_parts.append(
+
+            "✅ Task completion is progressing steadily."
+        )
+
+    else:
+
+        summary_parts.append(
+
+            "✅ Start completing tasks to unlock productivity analysis."
+        )
+
+    # MOOD
+    if moods >= 10:
+
+        summary_parts.append(
+
+            "😊 Emotional awareness tracking is improving."
+        )
+
+    elif moods > 0:
+
+        summary_parts.append(
+
+            "😊 Mood tracking activity detected."
+        )
+
+    else:
+
+        summary_parts.append(
+
+            "😊 Add mood entries for emotional AI insights."
+        )
+
+    # GOALS
+    if goals > 0:
+
+        summary_parts.append(
+
+            "🎯 Active goals are helping growth progression."
+        )
+
+    else:
+
+        summary_parts.append(
+
+            "🎯 Create goals to improve long-term planning."
+        )
+
+    # FINAL AI INSIGHT
+    summary_parts.append(
+
+        "🤖 LifeLedger AI continuously adapts insights based on your financial, behavioral and productivity patterns."
+    )
+
+    final_summary = "\n\n".join(
+        summary_parts
+    )
 
     return JsonResponse({
 
-        "status": "success",
+        "status":
+            "success",
 
-        "days":
-            days,
+        "summary":
+            final_summary,
 
-        "insight":
-            insight,
+        "income":
+            income,
+
+        "expense":
+            expense,
+
+        "savings":
+            savings,
+
+        "habits":
+            habits,
+
+        "tasks":
+            tasks,
+
+        "moods":
+            moods,
+
+        "goals":
+            goals,
     })
+@csrf_exempt
+def heatmap_view(request, user_id):
+
+    try:
+
+        user = User.objects.get(
+            id=user_id
+        )
+
+        moods = Mood.objects.filter(
+            user=user
+        ).order_by("-date")[:30]
+
+        tasks = Task.objects.filter(
+            user=user,
+            completed=True
+        )
+
+        habit_logs = HabitLog.objects.filter(
+            habit__user=user,
+            completed=True
+        )
+
+        heatmap = []
+
+        for i in range(1, 31):
+
+            score = 0
+
+            # 😊 mood contribution
+            if moods.count() >= i:
+                score += 30
+
+            # ✅ task contribution
+            if tasks.count() >= i:
+                score += 40
+
+            # 🔥 habit contribution
+            if habit_logs.count() >= i:
+                score += 30
+
+            score = max(
+                0,
+                min(100, score)
+            )
+
+            level = "low"
+
+            if score >= 80:
+
+                level = "excellent"
+
+            elif score >= 40:
+
+                level = "average"
+
+            heatmap.append({
+
+                "day": i,
+
+                "score": score,
+
+                "level": level,
+            })
+
+        # 🤖 AI insight
+        insight = ""
+
+        avg_score = sum(
+            d["score"] for d in heatmap
+        ) / len(heatmap)
+
+        if avg_score >= 70:
+
+            insight = (
+                "🔥 Strong lifestyle consistency detected this month."
+            )
+
+        elif avg_score >= 40:
+
+            insight = (
+                "📈 Your routines are improving steadily."
+            )
+
+        else:
+
+            insight = (
+                "⚠ Activity levels are low. Start tracking daily habits and moods."
+            )
+
+        return JsonResponse({
+
+            "status":
+                "success",
+
+            "days":
+                heatmap,
+
+            "insight":
+                insight,
+        })
+
+    except Exception as e:
+
+        print("HEATMAP ERROR:", e)
+
+        return JsonResponse({
+
+            "status":
+                "error",
+
+            "days": [],
+
+            "insight":
+                "Unable to generate heatmap currently."
+        })
 @csrf_exempt
 def networth_view(request, user_id):
 
