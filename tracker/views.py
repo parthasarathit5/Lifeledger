@@ -8,7 +8,7 @@ import json
 from django.core.mail import send_mail
 import random
 from datetime import date, timedelta
-from .models import User, Expense, Income, Habit, HabitLog, Task, History,Budget,Goal,Achievement,Streak
+from .models import User, Expense, Income, Habit, HabitLog, Task, History,Budget,Goal,Achievement,Streak,Mood
 
 
 def save_history(user, type, title, amount=None, category="", note=""):
@@ -302,117 +302,63 @@ def task_view(request, user_id):
 
 @csrf_exempt
 def mood_view(request, user_id):
-
+    # Validate user exists
     try:
-
-        user = User.objects.get(
-            id=user_id
-        )
-
+        user = User.objects.get(id=user_id)
     except User.DoesNotExist:
-
-        return JsonResponse({
-
-            "status":
-                "error",
-
-            "message":
-                "User not found"
-        })
-
-    # 📥 FETCH MOODS
+        return JsonResponse(
+            {"status": "error", "message": f"User {user_id} not found"}, status=404
+        )
+ 
     if request.method == "GET":
-
+        moods = Mood.objects.filter(user=user)
+        mood_list = [
+            {
+                "id": m.id,
+                "mood": m.mood,
+                "note": m.note or "",
+                "date": m.date.isoformat(),
+            }
+            for m in moods
+        ]
+        return JsonResponse({"status": "success", "moods": mood_list})
+ 
+    if request.method == "POST":
         try:
-
-            moods = Mood.objects.filter(
-                user=user
-            ).order_by("-date")
-
-            mood_list = []
-
-            for m in moods:
-
-                mood_list.append({
-
-                    "mood":
-                        m.mood,
-
-                    "note":
-                        m.note,
-
-                    "date":
-                        str(m.date),
-                })
-
-            return JsonResponse({
-
-                "status":
-                    "success",
-
-                "moods":
-                    mood_list,
-            })
-
-        except Exception as e:
-
-            print("MOOD GET ERROR:", e)
-
-            return JsonResponse({
-
-                "status":
-                    "error",
-
-                "moods": [],
-            })
-
-    # ➕ ADD MOOD
-    elif request.method == "POST":
-
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse(
+                {"status": "error", "message": "Invalid JSON body"}, status=400
+            )
+ 
+        mood = data.get("mood")
+        note = data.get("note", "")
+ 
+        valid_moods = [choice[0] for choice in Mood.MOOD_CHOICES]
+        if not mood or mood not in valid_moods:
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "message": f"Mood must be one of {valid_moods}, got '{mood}'",
+                },
+                status=400,
+            )
+ 
         try:
-
-            data = json.loads(
-                request.body
-            )
-
-            Mood.objects.create(
-
-                user=user,
-
-                mood=data.get(
-                    "mood"
-                ),
-
-                note=data.get(
-                    "note", ""
-                ),
-            )
-
-            return JsonResponse({
-
-                "status":
-                    "success"
-            })
-
+            Mood.objects.create(user=user, mood=mood, note=note)
+            return JsonResponse({"status": "success"})
         except Exception as e:
-
-            print("MOOD POST ERROR:", e)
-
-            return JsonResponse({
-
-                "status":
-                    "error",
-
-                "message":
-                    "Unable to save mood"
-            })
-
-    return JsonResponse({
-
-        "status":
-            "error"
-    })
-
+            # This will show the REAL database/save error in the response
+            # (fine for development — tighten this before going to production)
+            return JsonResponse(
+                {"status": "error", "message": f"Save failed: {str(e)}"}, status=500
+            )
+ 
+    return JsonResponse(
+        {"status": "error", "message": f"Method {request.method} not allowed"},
+        status=405,
+    )
+ 
 @csrf_exempt
 def history_view(request, user_id):
     try:

@@ -1,6 +1,6 @@
 from django.db import models
 
-
+from django.contrib.auth.models import User
 class User(models.Model):
     name = models.CharField(max_length=100, default="")
     email = models.EmailField(unique=True)
@@ -92,20 +92,24 @@ class Task(models.Model):
 
 class Mood(models.Model):
     MOOD_CHOICES = [
-        ('great', '😄 Great'),
-        ('good', '🙂 Good'),
-        ('okay', '😐 Okay'),
-        ('bad', '😔 Bad'),
-        ('terrible', '😢 Terrible'),
+        ("great", "Great"),
+        ("good", "Good"),
+        ("okay", "Okay"),
+        ("bad", "Bad"),
+        ("terrible", "Terrible"),
     ]
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='moods', null=True)
+ 
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="moods")
     mood = models.CharField(max_length=20, choices=MOOD_CHOICES)
     note = models.TextField(blank=True, default="")
     date = models.DateField(auto_now_add=True)
-
+ 
+    class Meta:
+        ordering = ["-id"]
+ 
     def __str__(self):
-        return f"{self.mood} - {self.date}"
-
+        return f"{self.user.username} - {self.mood} ({self.date})"
+ 
 
 class History(models.Model):
     TYPE_CHOICES = [
