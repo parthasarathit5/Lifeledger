@@ -4,6 +4,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.utils import timezone
 from django.utils.timezone import localtime
 from django.db.models import Sum, Count
+from django.conf import settings
 import json
 from django.core.mail import send_mail
 import random
