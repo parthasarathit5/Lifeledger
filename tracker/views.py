@@ -8,7 +8,7 @@ import json
 from django.core.mail import send_mail
 import random
 from datetime import date, timedelta
-from .models import User, Expense, Income, Habit, HabitLog, Task, History,Budget,Goal,Achievement,Streak,Mood
+from .models import User, Expense, Income, Habit, HabitLog, Task, History,Budget,Goal,Achievement,Streak,Mood,PasswordResetOTP
 
 
 def save_history(user, type, title, amount=None, category="", note=""):
