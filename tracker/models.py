@@ -98,18 +98,18 @@ class Mood(models.Model):
         ("bad", "Bad"),
         ("terrible", "Terrible"),
     ]
- 
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="moods")
     mood = models.CharField(max_length=20, choices=MOOD_CHOICES)
     note = models.TextField(blank=True, default="")
     date = models.DateField(auto_now_add=True)
- 
+
     class Meta:
         ordering = ["-id"]
- 
+
     def __str__(self):
-        return f"{self.user.username} - {self.mood} ({self.date})"
- 
+        return f"{self.user.name} - {self.mood} ({self.date})"
+
 
 class History(models.Model):
     TYPE_CHOICES = [

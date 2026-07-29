@@ -299,6 +299,12 @@ def task_view(request, user_id):
             return JsonResponse({"status": "error", "message": "Invalid request"})
         Task.objects.filter(id=data.get("id"), user=user).delete()
         return JsonResponse({"status": "success"})
+import json
+from datetime import date
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import User, Mood, History
+
 
 @csrf_exempt
 def mood_view(request, user_id):
@@ -309,7 +315,7 @@ def mood_view(request, user_id):
         return JsonResponse(
             {"status": "error", "message": f"User {user_id} not found"}, status=404
         )
- 
+
     if request.method == "GET":
         moods = Mood.objects.filter(user=user)
         mood_list = [
@@ -322,7 +328,7 @@ def mood_view(request, user_id):
             for m in moods
         ]
         return JsonResponse({"status": "success", "moods": mood_list})
- 
+
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -330,10 +336,10 @@ def mood_view(request, user_id):
             return JsonResponse(
                 {"status": "error", "message": "Invalid JSON body"}, status=400
             )
- 
+
         mood = data.get("mood")
         note = data.get("note", "")
- 
+
         valid_moods = [choice[0] for choice in Mood.MOOD_CHOICES]
         if not mood or mood not in valid_moods:
             return JsonResponse(
@@ -343,17 +349,29 @@ def mood_view(request, user_id):
                 },
                 status=400,
             )
- 
+
         try:
-            Mood.objects.create(user=user, mood=mood, note=note)
+            new_mood = Mood.objects.create(user=user, mood=mood, note=note)
+
+            # Also log this into the unified History feed
+            today = date.today()
+            History.objects.create(
+                user=user,
+                type="mood",
+                title=f"Logged mood: {mood.capitalize()}",
+                note=note,
+                category="mood",
+                month=today.month,
+                year=today.year,
+            )
+
             return JsonResponse({"status": "success"})
         except Exception as e:
-            # This will show the REAL database/save error in the response
-            # (fine for development — tighten this before going to production)
+            # Real DB/save error shows up here for easy debugging
             return JsonResponse(
                 {"status": "error", "message": f"Save failed: {str(e)}"}, status=500
             )
- 
+
     return JsonResponse(
         {"status": "error", "message": f"Method {request.method} not allowed"},
         status=405,
