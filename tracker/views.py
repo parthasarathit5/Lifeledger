@@ -2256,138 +2256,107 @@ def achievements_view(request, user_id):
         "achievements":
             achievements,
     })
+# Add PasswordResetOTP to your existing import line at the top of views.py:
+#
+# from .models import User, Expense, Income, Habit, HabitLog, Task, History, Budget, Goal, Achievement, Streak, Mood, PasswordResetOTP
+#
+# Also add this import near the top of the file:
+# from django.conf import settings
+
+
 @csrf_exempt
 def forgot_password_view(request):
-
-    if request.method == "POST":
-
-        data = json.loads(
-            request.body
-        )
-
-        email = data.get("email")
-
-        print("EMAIL:", email)
-
-        try:
-
-            user = User.objects.get(
-                email=email
-            )
-
-            print("USER FOUND")
-
-        except User.DoesNotExist:
-
-            print("USER NOT FOUND")
-
-            return JsonResponse({
-
-                "status":
-                    "error",
-
-                "message":
-                    "Email not found"
-            })
-
-        otp = str(
-            random.randint(
-                100000,
-                999999
-            )
-        )
-
-        print("OTP:", otp)
-
-        PasswordResetOTP.objects.create(
-
-            email=email,
-
-            otp=otp
-        )
-
-        send_mail(
-
-            'LifeLedger OTP',
-
-            f'Your OTP is {otp}',
-
-            EMAIL_HOST_USER,
-
-            [email],
-
-            fail_silently=False,
-        )
-
-        print("MAIL SENT")
-
-        return JsonResponse({
-
-            "status":
-                "success"
-        })
-@csrf_exempt
-def verify_otp_view(request):
-
-    data = json.loads(
-        request.body
-    )
-
-    email = data.get("email")
-
-    otp = data.get("otp")
-
-    exists = PasswordResetOTP.objects.filter(
-
-        email=email,
-
-        otp=otp
-    ).exists()
-
-    if exists:
-
-        return JsonResponse({
-
-            "status":
-                "success"
-        })
-
-    return JsonResponse({
-
-        "status":
-            "error"
-    })
-@csrf_exempt
-def reset_password_view(request):
-
-    data = json.loads(
-        request.body
-    )
-
-    email = data.get("email")
-
-    password = data.get("password")
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Invalid request method"})
 
     try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON body"})
 
-        user = User.objects.get(
-            email=email
+    email = data.get("email")
+
+    if not email:
+        return JsonResponse({"status": "error", "message": "Email is required"})
+
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Email not found"})
+
+    otp = str(random.randint(100000, 999999))
+
+    PasswordResetOTP.objects.create(email=email, otp=otp)
+
+    try:
+        send_mail(
+            'LifeLedger OTP',
+            f'Your OTP is {otp}',
+            settings.EMAIL_HOST_USER,
+            [email],
+            fail_silently=False,
         )
+    except Exception as e:
+        # OTP was saved but email failed to send — tell the truth instead of a fake success
+        return JsonResponse({
+            "status": "error",
+            "message": f"Could not send email: {str(e)}"
+        })
 
-        user.password = password
+    return JsonResponse({"status": "success"})
 
+
+@csrf_exempt
+def verify_otp_view(request):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Invalid request method"})
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON body"})
+
+    email = data.get("email")
+    otp = data.get("otp")
+
+    if not email or not otp:
+        return JsonResponse({"status": "error", "message": "Email and OTP are required"})
+
+    exists = PasswordResetOTP.objects.filter(email=email, otp=otp).exists()
+
+    if exists:
+        return JsonResponse({"status": "success"})
+
+    return JsonResponse({"status": "error", "message": "Invalid or expired OTP"})
+
+
+@csrf_exempt
+def reset_password_view(request):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Invalid request method"})
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON body"})
+
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+        return JsonResponse({"status": "error", "message": "Email and password are required"})
+
+    try:
+        user = User.objects.get(email=email)
+        user.password = make_password(password)  # hash it, same as signup
         user.save()
 
-        return JsonResponse({
+        # Clean up used OTPs for this email so they can't be reused
+        PasswordResetOTP.objects.filter(email=email).delete()
 
-            "status":
-                "success"
-        })
+        return JsonResponse({"status": "success"})
 
-    except:
-
-        return JsonResponse({
-
-            "status":
-                "error"
-        })
+    except User.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "User not found"})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": f"Reset failed: {str(e)}"})
