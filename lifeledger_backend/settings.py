@@ -127,17 +127,21 @@ EMAIL_BACKEND = (
     'django.core.mail.backends.smtp.EmailBackend'
 )
 
-EMAIL_HOST = 'smtp.gmail.com'
+# In settings.py, replace these two lines:
+#
+#     EMAIL_HOST_USER = 'parthasarthit4@gmail.com'          # <-- typo, missing 'a'
+#     EMAIL_HOST_PASSWORD = 'Parthasarathit@4444'           # <-- real password, Gmail will reject this
+#
+# with:
 
-EMAIL_PORT = 587
+EMAIL_HOST_USER = 'parthasarathit4@gmail.com'  # corrected spelling
+EMAIL_HOST_PASSWORD = 'LifeLedgerBackend'  # e.g. 'abcdefghijklmnop' (remove spaces)
 
-EMAIL_USE_TLS = True
-
-EMAIL_HOST_USER = 'parthasarthit4@gmail.com'
-
-EMAIL_HOST_PASSWORD = 'Parthasarathit@4444'
-
+# Get the app password from:
+# https://myaccount.google.com/apppasswords
+# (requires 2-Step Verification to be turned on first)
 # Great question! 😊
+# pdii ookl anwk bayi
 
 # **Supabase IS PostgreSQL!**
 
