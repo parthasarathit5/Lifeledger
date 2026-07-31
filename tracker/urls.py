@@ -44,9 +44,9 @@ urlpatterns = [
     path('budget/<int:user_id>/', budget_view),
     path('predictor/<int:user_id>/', predictor_view),
     path('compare/<int:user_id>/', compare_view),
-    path('alerts/<int:user_id>/', smart_alerts_view),
+    path('alerts/<int:user_id>/', alerts_view),
     path('behavior/<int:user_id>/', behavior_view),
-    path('alerts/<int:user_id>/',alerts_view),
+    path('smart-alerts/<int:user_id>/', smart_alerts_view),
     path('goals/<int:user_id>/', goal_view),
     path(
     'daily-summary/<int:user_id>/',daily_summary_view),
