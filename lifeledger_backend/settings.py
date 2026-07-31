@@ -135,13 +135,13 @@ EMAIL_BACKEND = (
 # with:
 
 EMAIL_HOST_USER = 'parthasarathit4@gmail.com'  # corrected spelling
-EMAIL_HOST_PASSWORD = 'LifeLedgerBackend'  # e.g. 'abcdefghijklmnop' (remove spaces)
+EMAIL_HOST_PASSWORD = 'aofdbvqifvpjwwie'  # e.g. 'abcdefghijklmnop' (remove spaces)
 
 # Get the app password from:
 # https://myaccount.google.com/apppasswords
 # (requires 2-Step Verification to be turned on first)
 # Great question! 😊
-# pdii ookl anwk bayi
+# aofd bvqi fvpj wwie
 
 # **Supabase IS PostgreSQL!**
 
