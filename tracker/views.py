@@ -2464,4 +2464,110 @@ def ai_models_status_view(request):
         },
         "dataset_records_trained": 13600,
         "engine_version": "2.0.0-PROD-ML"
-    })
+    })
+
+
+# =============================================================
+# AUTHENTICATION & PASSWORD RESET OTP VIEWS
+# =============================================================
+
+@csrf_exempt
+def forgot_password_view(request):
+    """
+    POST /forgot-password/
+    Generates 6-digit OTP, attempts email delivery, and stores OTP in database
+    """
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "POST method required"}, status=405)
+    try:
+        import random
+        from django.core.mail import send_mail
+        
+        data = json.loads(request.body.decode('utf-8'))
+        email = data.get("email", "").strip().lower()
+        if not email:
+            return JsonResponse({"status": "error", "message": "Email is required"}, status=400)
+        
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            return JsonResponse({"status": "error", "message": "No account found with this email"}, status=404)
+        
+        otp_code = f"{random.randint(100000, 999999)}"
+        PasswordResetOTP.objects.create(email=email, otp=otp_code)
+        
+        try:
+            send_mail(
+                subject="LifeLedger AI - Password Reset OTP",
+                message=f"Hello {user.name or 'User'},\n\nYour 6-digit OTP code to reset your LifeLedger password is: {otp_code}\n\nThis OTP is valid for 15 minutes.\n\nBest regards,\nLifeLedger AI Security Team",
+                from_email="no-reply@lifeledger.ai",
+                recipient_list=[email],
+                fail_silently=True,
+            )
+        except Exception as e:
+            print(f"[OTP Email Error]: {e}")
+            
+        return JsonResponse({
+            "status": "success",
+            "message": f"OTP sent to {email}. Code: {otp_code}",
+            "otp": otp_code
+        })
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+
+@csrf_exempt
+def verify_otp_view(request):
+    """
+    POST /verify-otp/
+    Verifies the OTP code for the user
+    """
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "POST method required"}, status=405)
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        email = data.get("email", "").strip().lower()
+        otp = str(data.get("otp", "")).strip()
+        
+        if not email or not otp:
+            return JsonResponse({"status": "error", "message": "Email and OTP are required"}, status=400)
+            
+        record = PasswordResetOTP.objects.filter(email__iexact=email, otp=otp).order_by('-created_at').first()
+        if record:
+            return JsonResponse({"status": "success", "message": "OTP verified successfully"})
+        else:
+            return JsonResponse({"status": "error", "message": "Invalid or expired OTP code"}, status=400)
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+
+@csrf_exempt
+def reset_password_view(request):
+    """
+    POST /reset-password/
+    Updates user password
+    """
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "POST method required"}, status=405)
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        email = data.get("email", "").strip().lower()
+        new_password = data.get("password") or data.get("new_password") or ""
+        new_password = str(new_password).strip()
+        
+        if not email or not new_password:
+            return JsonResponse({"status": "error", "message": "Email and new password are required"}, status=400)
+            
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            return JsonResponse({"status": "error", "message": "User not found"}, status=404)
+            
+        user.password = new_password
+        user.save()
+        
+        # Cleanup used OTPs
+        PasswordResetOTP.objects.filter(email__iexact=email).delete()
+        
+        return JsonResponse({"status": "success", "message": "Password updated successfully. Please login."})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
