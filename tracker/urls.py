@@ -23,9 +23,16 @@ from .views import (
     networth_view,
     streaks_view,
     achievements_view,
-     reset_password_view,
-      verify_otp_view,
-      forgot_password_view,
+    reset_password_view,
+    verify_otp_view,
+    forgot_password_view,
+    # New AI & ML Endpoints
+    ai_categorize_view,
+    ai_forecast_view,
+    ai_anomaly_view,
+    ai_advisor_view,
+    ai_advisor_history_view,
+    ai_models_status_view,
 )
 
 urlpatterns = [
@@ -48,37 +55,20 @@ urlpatterns = [
     path('behavior/<int:user_id>/', behavior_view),
     path('smart-alerts/<int:user_id>/', smart_alerts_view),
     path('goals/<int:user_id>/', goal_view),
-    path(
-    'daily-summary/<int:user_id>/',daily_summary_view),
-   path(
-    'heatmap/<int:user_id>/',
-     heatmap_view,
-),
-   path(
-    'networth/<int:user_id>/',
-    networth_view,
-),
-   path(
-    'streaks/<int:user_id>/',
-    streaks_view,
-),
+    path('daily-summary/<int:user_id>/', daily_summary_view),
+    path('heatmap/<int:user_id>/', heatmap_view),
+    path('networth/<int:user_id>/', networth_view),
+    path('streaks/<int:user_id>/', streaks_view),
+    path('achievements/<int:user_id>/', achievements_view),
+    path('forgot-password/', forgot_password_view),
+    path('verify-otp/', verify_otp_view),
+    path('reset-password/', reset_password_view),
 
-path(
-    'achievements/<int:user_id>/',
-    achievements_view,
-),
-path(
-    'forgot-password/',
-    forgot_password_view
-),
-
-path(
-    'verify-otp/',
-    verify_otp_view
-),
-
-path(
-    'reset-password/',
-    reset_password_view
-),
+    # ================= AI & ML ROUTES =================
+    path('api/ai/categorize/', ai_categorize_view),
+    path('api/ai/predict/<int:user_id>/', ai_forecast_view),
+    path('api/ai/anomaly/<int:user_id>/', ai_anomaly_view),
+    path('api/ai/advisor/<int:user_id>/', ai_advisor_view),
+    path('api/ai/advisor/history/<int:user_id>/', ai_advisor_history_view),
+    path('api/ai/status/', ai_models_status_view),
 ]

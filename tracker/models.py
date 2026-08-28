@@ -240,3 +240,27 @@ class PasswordResetOTP(models.Model):
     created_at = models.DateTimeField(
         auto_now_add=True
     )
+
+
+class AIPredictionLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ai_predictions')
+    predicted_expense = models.FloatField(default=0.0)
+    predicted_savings = models.FloatField(default=0.0)
+    risk_class = models.CharField(max_length=50, default='Low')
+    confidence_score = models.FloatField(default=0.90)
+    model_version = models.CharField(max_length=50, default='v1.0-RF')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"AI Prediction {self.user.email} - ₹{self.predicted_expense} ({self.created_at})"
+
+
+class AIAdvisorChat(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ai_chats')
+    question = models.TextField()
+    answer = models.TextField()
+    category = models.CharField(max_length=50, default='general')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"AI Chat {self.user.email} - {self.category} ({self.created_at})"
