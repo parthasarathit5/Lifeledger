@@ -263,4 +263,16 @@ class AIAdvisorChat(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"AI Chat {self.user.email} - {self.category} ({self.created_at})"
+        return f"AI Chat {self.user.email} - {self.category} ({self.created_at})"
+
+
+class UserActivityLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_logs', null=True, blank=True)
+    action = models.CharField(max_length=100)
+    details = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        email = self.user.email if self.user else "Anonymous"
+        return f"Activity {email} - {self.action} ({self.created_at})"
+

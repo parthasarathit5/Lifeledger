@@ -12,7 +12,7 @@ from datetime import date, timedelta
 from .models import (
     User, Expense, Income, Habit, HabitLog, Task, History,
     Budget, Goal, Achievement, Streak, Mood, PasswordResetOTP,
-    AIPredictionLog, AIAdvisorChat
+    AIPredictionLog, AIAdvisorChat, UserActivityLog
 )
 from .ml_service import ml_service
 from .ml_advisor import MLAdvisor
@@ -2299,6 +2299,28 @@ def ai_forecast_view(request, user_id):
     forecast = ml_service.forecast_user_finances(user)
     lifescore_info = ml_service.predict_lifescore(user)
 
+    # Persist in Supabase PostgreSQL
+    try:
+        pred_exp = forecast.get('predicted_next_month_expense', 0.0)
+        pred_sav = forecast.get('predicted_savings', 0.0)
+        risk = lifescore_info.get('risk_class', 'Low')
+        r2 = forecast.get('confidence_r2', 0.995)
+        AIPredictionLog.objects.create(
+            user=user,
+            predicted_expense=pred_exp,
+            predicted_savings=pred_sav,
+            risk_class=risk,
+            confidence_score=r2,
+            model_version='2.0.0-RandomForest'
+        )
+        UserActivityLog.objects.create(
+            user=user,
+            action="AI_PREDICT_FORECAST",
+            details=f"Predicted Exp: ₹{pred_exp}, Savings: ₹{pred_sav}, Risk: {risk}"
+        )
+    except Exception as log_err:
+        print(f"[Supabase Log Error]: {log_err}")
+
     return JsonResponse({
         "status": "success",
         "forecast": forecast,
@@ -2386,6 +2408,11 @@ def ai_advisor_view(request, user_id):
             question=question,
             answer=res['answer'],
             category=res.get('category', 'general')
+        )
+        UserActivityLog.objects.create(
+            user=user,
+            action="AI_ADVISOR_QUERY",
+            details=f"Q: {question} | Cat: {res.get('category', 'general')}"
         )
     except Exception as e:
         print(f"[AIAdvisorChat Error] {e}")
